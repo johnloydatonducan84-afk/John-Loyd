@@ -1,0 +1,69 @@
+# ==========================================
+# CareSched - PHP / XAMPP .gitignore
+# ==========================================
+
+# Composer
+/vendor/
+composer.lock
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Database / local configuration
+config/local.php
+config/database.local.php
+*.sql
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+php_errorlog
+error_log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.code-workspace
+
+# Operating System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# XAMPP temporary files
+xampp/
+htdocs/
+
+# Cache
+/cache/
+/tmp/
+/temp/
+
+# Uploaded files
+/uploads/*
+!/uploads/.gitkeep
+
+# Generated files
+*.zip
+*.rar
+*.7z
+
+# Node.js (if used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build / generated assets
+/dist/
+/build/
