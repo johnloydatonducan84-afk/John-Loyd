@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  * Patient login only for this portal.
                  */
                 if ($user['role'] === 'patient') {
-                    redirect('/caresched/patient/dashboard.php');
+                    redirect(app_url('patient/dashboard.php'));
                 } else {
                     $errors[] = 'Please use the admin login page for staff access.';
                 }

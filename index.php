@@ -3,12 +3,12 @@ require_once __DIR__ . '/includes/functions.php';
 
 if (!empty($_SESSION['role'])) {
     if ($_SESSION['role'] === 'admin') {
-        header('Location: /caresched/admin/dashboard.php');
+        header('Location: ' . app_url('admin/dashboard.php'));
         exit;
     }
 
     if ($_SESSION['role'] === 'patient') {
-        header('Location: /caresched/patient/dashboard.php');
+        header('Location: ' . app_url('patient/dashboard.php'));
         exit;
     }
 }
@@ -737,7 +737,7 @@ if (!empty($_SESSION['role'])) {
 
 
             <a
-                href="/caresched/login.php"
+                href="<?= e(app_url('login.php')) ?>"
                 class="btn btn-primary"
             >
 
@@ -749,7 +749,7 @@ if (!empty($_SESSION['role'])) {
 
 
             <a
-                href="/caresched/register.php"
+                href="<?= e(app_url('register.php')) ?>"
                 class="btn btn-outline-primary"
             >
 
@@ -766,7 +766,7 @@ if (!empty($_SESSION['role'])) {
         <!-- ADMIN LOGIN -->
 
         <a
-            href="/caresched/admin/"
+            href="<?= e(app_url('admin/')) ?>"
             class="mini-feature mt-3"
             style="text-decoration:none; width:fit-content;"
         >

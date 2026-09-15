@@ -1304,7 +1304,7 @@ function statusClass($status)
 
 
             <a
-                href="/caresched/"
+                href="<?= e(app_url('/')) ?>"
                 class="brand"
             >
 
@@ -1353,7 +1353,7 @@ function statusClass($status)
 
 
                 <a
-                    href="/caresched/logout.php"
+                    href="<?= e(app_url('logout.php')) ?>"
                     class="logout-btn"
                 >
 
@@ -1426,7 +1426,7 @@ function statusClass($status)
                 <div class="welcome-action">
 
                     <a
-                        href="/caresched/patient/book-appointment.php"
+                        href="<?= e(app_url('patient/book-appointment.php')) ?>"
                         class="book-btn"
                     >
 
@@ -1753,7 +1753,7 @@ function statusClass($status)
 
 
                             <a
-                                href="/caresched/patient/book-appointment.php"
+                                href="<?= e(app_url('patient/book-appointment.php')) ?>"
                                 class="book-btn mt-3"
                             >
 
@@ -1803,7 +1803,7 @@ function statusClass($status)
 
 
                     <a
-                        href="/caresched/patient/book-appointment.php"
+                        href="<?= e(app_url('patient/book-appointment.php')) ?>"
                         class="quick-action"
                     >
 
@@ -1837,7 +1837,7 @@ function statusClass($status)
 
 
                     <a
-                        href="/caresched/patient/appointments.php"
+                        href="<?= e(app_url('patient/appointments.php')) ?>"
                         class="quick-action"
                     >
 
@@ -1871,7 +1871,7 @@ function statusClass($status)
 
 
                     <a
-                        href="/caresched/patient/profile.php"
+                        href="<?= e(app_url('patient/profile.php')) ?>"
                         class="quick-action"
                     >
 

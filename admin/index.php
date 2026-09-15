@@ -1519,7 +1519,7 @@ body {
     <!-- BACK -->
 
     <a
-        href="/caresched/"
+        href="<?= e(app_url('/')) ?>"
         class="back-link"
     >
 

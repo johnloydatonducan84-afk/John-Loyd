@@ -9,11 +9,11 @@ function require_role(string $role): void
 {
     if (empty($_SESSION['user_id']) || empty($_SESSION['role']) || $_SESSION['role'] !== $role) {
         if ($role === 'admin') {
-            header('Location: /caresched/admin/');
+            header('Location: ' . app_url('admin/'));
             exit;
         }
 
-        header('Location: /caresched/login.php');
+        header('Location: ' . app_url('login.php'));
         exit;
     }
 }

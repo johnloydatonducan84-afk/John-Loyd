@@ -42,6 +42,58 @@ if (!empty($_SESSION['user_id']) && ini_get('session.use_cookies')) {
     );
 }
 
+/*
+ * The app's URL base path, detected automatically instead of hardcoded.
+ *
+ * Locally (XAMPP) the project lives in a /caresched/ subfolder under
+ * htdocs, so links need that prefix. On live hosting (e.g. ProFreeHost)
+ * the domain's document root often *is* the project root, so the same
+ * hardcoded "/caresched/..." links 404 (they resolve to a non-existent
+ * nested /caresched/caresched/... path). Comparing the project root
+ * against the server's document root lets the same codebase deploy to
+ * either layout without editing config per environment.
+ */
+if (!defined('APP_BASE_PATH')) {
+
+    $documentRoot = realpath($_SERVER['DOCUMENT_ROOT'] ?? '');
+    $appRoot = realpath(__DIR__ . '/..');
+
+    $basePath = '';
+
+    if ($documentRoot && $appRoot) {
+
+        $documentRoot = rtrim(str_replace('\\', '/', $documentRoot), '/');
+        $appRoot = rtrim(str_replace('\\', '/', $appRoot), '/');
+
+        if (stripos($appRoot, $documentRoot) === 0) {
+            $basePath = substr($appRoot, strlen($documentRoot));
+        }
+    }
+
+    define('APP_BASE_PATH', rtrim($basePath, '/'));
+}
+
+/**
+ * Build a root-relative app URL (e.g. app_url('patient/dashboard.php')).
+ * Pass '' or omit for the app's home URL.
+ */
+function app_url(string $path = ''): string
+{
+    return APP_BASE_PATH . '/' . ltrim($path, '/');
+}
+
+/**
+ * Build a full absolute app URL (scheme + host), for contexts like
+ * emails where a root-relative link isn't clickable on its own.
+ */
+function app_full_url(string $path = ''): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    return $scheme . '://' . $host . app_url($path);
+}
+
 /**
  * Generate or return CSRF token.
  */

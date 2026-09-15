@@ -4,6 +4,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/functions.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -343,7 +344,7 @@ function sendRegistrationEmail(
                 ">
 
                     <a
-                        href="http://localhost/caresched/login.php"
+                        href="' . e(app_full_url('login.php')) . '"
                         style="
                             display:inline-block;
                             padding:14px 28px;

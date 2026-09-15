@@ -207,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'Registration successful! You can now log in to your CareSched account.'
                     );
 
-                    redirect('/caresched/login.php');
+                    redirect(app_url('login.php'));
 
                     exit;
 

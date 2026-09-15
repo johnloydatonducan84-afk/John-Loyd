@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
         $stmt->execute(['id' => $conversation_id]);
 
-        redirect('/caresched/patient/messages.php');
+        redirect(app_url('patient/messages.php'));
     }
 }
 
@@ -180,13 +180,13 @@ $admin_fullname = $admin['full_name'] ?: $admin['username'];
 <nav class="top-navbar">
     <div class="container">
         <div class="navbar-inner">
-            <a href="/caresched/" class="brand"><i class="fa-solid fa-heart-pulse"></i> Care<span>Sched</span></a>
+            <a href="<?= e(app_url('/')) ?>" class="brand"><i class="fa-solid fa-heart-pulse"></i> Care<span>Sched</span></a>
             <div class="nav-links">
-                <a href="/caresched/patient/dashboard.php">Dashboard</a>
-                <a href="/caresched/patient/book-appointment.php">Book Appointment</a>
-                <a href="/caresched/patient/appointments.php">My Appointments</a>
-                <a href="/caresched/patient/messages.php" class="active">Messages</a>
-                <a href="/caresched/logout.php">Logout</a>
+                <a href="<?= e(app_url('patient/dashboard.php')) ?>">Dashboard</a>
+                <a href="<?= e(app_url('patient/book-appointment.php')) ?>">Book Appointment</a>
+                <a href="<?= e(app_url('patient/appointments.php')) ?>">My Appointments</a>
+                <a href="<?= e(app_url('patient/messages.php')) ?>" class="active">Messages</a>
+                <a href="<?= e(app_url('logout.php')) ?>">Logout</a>
             </div>
         </div>
     </div>
@@ -194,7 +194,7 @@ $admin_fullname = $admin['full_name'] ?: $admin['username'];
 
 <div class="content">
     <div class="breadcrumb">
-        <a href="/caresched/patient/dashboard.php">Patient Dashboard</a>
+        <a href="<?= e(app_url('patient/dashboard.php')) ?>">Patient Dashboard</a>
         <span>/</span>
         <span>Messages</span>
     </div>
@@ -233,7 +233,7 @@ $admin_fullname = $admin['full_name'] ?: $admin['username'];
         </div>
 
         <div class="chat-footer">
-            <form method="POST" action="/caresched/patient/messages.php">
+            <form method="POST" action="<?= e(app_url('patient/messages.php')) ?>">
                 <input type="hidden" name="csrf_token" value="<?= e($csrf_token) ?>">
                 <textarea name="message" placeholder="Type your message..." maxlength="2000"></textarea>
                 <button type="submit" class="btn btn-primary">Send</button>

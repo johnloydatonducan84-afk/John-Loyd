@@ -1342,7 +1342,7 @@ textarea.form-control {
 
 
 <a
-    href="/caresched/patient/dashboard.php"
+    href="<?= e(app_url('patient/dashboard.php')) ?>"
     class="brand"
 >
 
@@ -1361,7 +1361,7 @@ Care<span>Sched</span>
 
 
 <a
-    href="/caresched/patient/dashboard.php"
+    href="<?= e(app_url('patient/dashboard.php')) ?>"
     class="dashboard-btn"
 >
 
@@ -1375,7 +1375,7 @@ Dashboard
 
 
 <a
-    href="/caresched/logout.php"
+    href="<?= e(app_url('logout.php')) ?>"
     class="logout-btn"
 >
 
