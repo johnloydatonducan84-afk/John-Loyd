@@ -13,12 +13,20 @@ if (session_status() === PHP_SESSION_NONE) {
 
     ini_set('session.gc_maxlifetime', (string) SESSION_LIFETIME_SECONDS);
 
-    session_set_cookie_params([
-        'lifetime' => SESSION_LIFETIME_SECONDS,
-        'path'     => '/',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    /*
+     * The array form of session_set_cookie_params() needs PHP 7.3+.
+     * Some hosts (e.g. cheaper shared/free hosting) still run older
+     * PHP, where that array form throws a fatal error on every
+     * request. The classic positional-argument form works on every
+     * PHP version, so we use that instead.
+     */
+    session_set_cookie_params(
+        SESSION_LIFETIME_SECONDS,
+        '/',
+        '',
+        false,
+        true
+    );
 
     session_start();
 }
