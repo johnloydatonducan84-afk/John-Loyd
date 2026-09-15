@@ -1594,9 +1594,9 @@ body {
 
             <div>
 
-                <strong>Administrator</strong>
+                <strong><?= e($_SESSION['username'] ?? 'Administrator') ?></strong>
 
-                <span>RHU Arakan</span>
+                <span><?= e($_SESSION['email'] ?? 'RHU Arakan') ?></span>
 
             </div>
 

@@ -1181,11 +1181,11 @@ try {
             <div>
 
                 <strong>
-                    Administrator
+                    <?= e($_SESSION['username'] ?? 'Administrator') ?>
                 </strong>
 
                 <span>
-                    RHU Arakan
+                    <?= e($_SESSION['email'] ?? 'RHU Arakan') ?>
                 </span>
 
             </div>

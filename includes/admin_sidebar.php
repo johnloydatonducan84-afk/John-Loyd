@@ -156,6 +156,69 @@ function sidebar_active(string $page, string $currentPage): string
     border-top: 1px solid rgba(255,255,255,.08);
 }
 
+/* THEME TOGGLE */
+.theme-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: 11px;
+    background: rgba(255,255,255,.05);
+}
+.theme-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255,255,255,.64);
+    font-size: 11px;
+    font-weight: 600;
+}
+.theme-toggle-label i { width: 14px; text-align: center; font-size: 12px; }
+.theme-switch {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255,255,255,.18);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .2s ease;
+}
+.theme-switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform .2s ease;
+}
+html[data-theme="dark"] .theme-switch {
+    background: #0d6efd;
+}
+html[data-theme="dark"] .theme-switch::before {
+    transform: translateX(18px);
+}
+
+/* DARK THEME (applied to page content area; sidebar is already dark) */
+html[data-theme="dark"] .main {
+    filter: invert(1) hue-rotate(180deg);
+}
+html[data-theme="dark"] .main img,
+html[data-theme="dark"] .main svg,
+html[data-theme="dark"] .main video,
+html[data-theme="dark"] .main iframe,
+html[data-theme="dark"] .main i {
+    filter: invert(1) hue-rotate(180deg);
+}
+html[data-theme="dark"] body {
+    background: #0b1120;
+}
+
 .logout-link:hover {
     background: rgba(220,53,69,.16) !important;
     color: #ffb3ba !important;
@@ -267,6 +330,14 @@ function sidebar_active(string $page, string $currentPage): string
     </a>
 
     <div class="sidebar-bottom">
+        <div class="theme-toggle-row">
+            <span class="theme-toggle-label">
+                <i class="fa-solid fa-moon" id="themeIcon"></i>
+                <span id="themeLabel">Dark Mode</span>
+            </span>
+            <button type="button" class="theme-switch" id="themeSwitch" title="Toggle dark / light mode"></button>
+        </div>
+
         <a href="../logout.php"
            class="sidebar-link logout-link"
            onclick="return confirm('Are you sure you want to logout?');">
@@ -295,5 +366,49 @@ function sidebar_active(string $page, string $currentPage): string
             sidebar.classList.remove('open');
         }
     });
+})();
+
+/* THEME TOGGLE (dark / light) */
+(function () {
+    const STORAGE_KEY = 'caresched_admin_theme';
+    const root = document.documentElement;
+    const themeSwitch = document.getElementById('themeSwitch');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            root.setAttribute('data-theme', 'dark');
+            if (themeIcon) {
+                themeIcon.classList.remove('fa-moon');
+                themeIcon.classList.add('fa-sun');
+            }
+            if (themeLabel) themeLabel.textContent = 'Light Mode';
+        } else {
+            root.removeAttribute('data-theme');
+            if (themeIcon) {
+                themeIcon.classList.remove('fa-sun');
+                themeIcon.classList.add('fa-moon');
+            }
+            if (themeLabel) themeLabel.textContent = 'Dark Mode';
+        }
+    }
+
+    let savedTheme = 'light';
+    try {
+        savedTheme = localStorage.getItem(STORAGE_KEY) || 'light';
+    } catch (e) {}
+
+    applyTheme(savedTheme);
+
+    if (themeSwitch) {
+        themeSwitch.addEventListener('click', function () {
+            const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+            try {
+                localStorage.setItem(STORAGE_KEY, next);
+            } catch (e) {}
+        });
+    }
 })();
 </script>

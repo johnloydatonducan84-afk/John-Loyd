@@ -1886,7 +1886,9 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
 
 <i class="bi bi-shield-check text-primary me-1"></i>
 
-Administrator
+<?= e($_SESSION['username'] ?? 'Administrator') ?>
+
+<small style="display:block; font-weight:500; color:#64748b; font-size:9px; margin-top:2px;"><?= e($_SESSION['email'] ?? '') ?></small>
 
 </div>
 

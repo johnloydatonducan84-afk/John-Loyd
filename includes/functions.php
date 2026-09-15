@@ -4,10 +4,12 @@
  * How long (in seconds) a signed-in session stays valid without activity.
  * Default PHP settings (session.gc_maxlifetime = 1440s / 24 minutes) were
  * causing users to be bounced back to the login page after using the app
- * for a while, so we extend it here and refresh the cookie on every
- * request so it keeps sliding forward while the user is active.
+ * for a while. Users want to stay signed in until they explicitly log
+ * out, so this is set very long (30 days) and slides forward on every
+ * request - as long as they visit at least once within that window,
+ * they are never bounced back to login on their own.
  */
-define('SESSION_LIFETIME_SECONDS', 4 * 60 * 60); // 4 hours
+define('SESSION_LIFETIME_SECONDS', 30 * 24 * 60 * 60); // 30 days
 
 if (session_status() === PHP_SESSION_NONE) {
 

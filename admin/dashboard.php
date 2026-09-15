@@ -914,9 +914,9 @@ $today_appointments_list = $today_stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <div>
 
-                <strong>Administrator</strong>
+                <strong><?= e($_SESSION['username'] ?? 'Administrator') ?></strong>
 
-                <span>RHU Arakan</span>
+                <span><?= e($_SESSION['email'] ?? 'RHU Arakan') ?></span>
 
             </div>
 
@@ -935,7 +935,7 @@ $today_appointments_list = $today_stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="welcome">
 
             <h2>
-                Good day, Administrator 👋
+                Good day, <?= e($_SESSION['username'] ?? 'Administrator') ?> 👋
             </h2>
 
             <p>

@@ -476,7 +476,7 @@ a { text-decoration:none; }
 
     <div class="admin-profile">
         <div class="admin-avatar"><i class="fa-solid fa-user-shield"></i></div>
-        <div><strong>Administrator</strong><span>RHU Arakan</span></div>
+        <div><strong><?= e($_SESSION['username'] ?? 'Administrator') ?></strong><span><?= e($_SESSION['email'] ?? 'RHU Arakan') ?></span></div>
     </div>
 </header>
 

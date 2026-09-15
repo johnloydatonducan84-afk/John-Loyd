@@ -2100,11 +2100,11 @@ function notification_icon(
             <div class="admin-info">
 
                 <strong>
-                    Administrator
+                    <?= e($_SESSION['username'] ?? 'Administrator') ?>
                 </strong>
 
                 <span>
-                    RHU Arakan
+                    <?= e($_SESSION['email'] ?? 'RHU Arakan') ?>
                 </span>
 
             </div>
