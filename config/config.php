@@ -1,5 +1,7 @@
 <?php
 
+// Do not edit real credentials here - put them in config/local.php instead
+// (gitignored, safe from being overwritten by deploys). See below.
 $config = [
     // Database (local XAMPP defaults)
     'db_host' => 'localhost',
