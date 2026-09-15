@@ -23,6 +23,28 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --prefer-dist --optimize-autoloader
 
+      - name: Generate config/local.php from secrets
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+        run: |
+          if [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ] && [ -n "$DB_USER" ]; then
+            php -r '
+              $config = [
+                  "db_host" => getenv("DB_HOST"),
+                  "db_name" => getenv("DB_NAME"),
+                  "db_user" => getenv("DB_USER"),
+                  "db_pass" => getenv("DB_PASS"),
+              ];
+              file_put_contents("config/local.php", "<?php\nreturn " . var_export($config, true) . ";\n");
+              echo "config/local.php generated.\n";
+            '
+          else
+            echo "DB_HOST / DB_NAME / DB_USER secrets not set - skipping config/local.php generation."
+          fi
+
       - name: Deploy to ProFreeHost
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
