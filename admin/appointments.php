@@ -707,6 +707,27 @@ unset(
 
 
 // ======================================================
+// DELETE APPOINTMENT
+// ======================================================
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+
+    $deleteId = (int) ($_POST['appointment_id'] ?? 0);
+
+    if ($deleteId > 0) {
+
+        $deleteStmt = $pdo->prepare("DELETE FROM appointments WHERE id = :id");
+        $deleteStmt->execute([':id' => $deleteId]);
+
+        $_SESSION['appointment_success'] = 'Appointment record deleted successfully.';
+    }
+
+    header('Location: appointments.php');
+    exit;
+}
+
+
+// ======================================================
 // STATUS UPDATE
 // ======================================================
 
@@ -1766,6 +1787,53 @@ table {
     background: #0b5ed7;
 }
 
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.icon-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 8px;
+    font-size: 11px;
+    text-decoration: none;
+    transition: .2s ease;
+    cursor: pointer;
+}
+.icon-btn:hover { transform: translateY(-2px); }
+.icon-btn.view { color: #0d6efd; background: #eef4ff; }
+.icon-btn.view:hover { color: #fff; background: #0d6efd; }
+.icon-btn.delete { color: #b42318; background: #fff0f0; }
+.icon-btn.delete:hover { color: #fff; background: #b42318; }
+
+.hero-action-btn {
+    display: inline-flex;
+    align-items: center;
+    height: 39px;
+    padding: 0 16px;
+    border-radius: 11px;
+    border: 1px solid #dbe4ee;
+    background: #fff;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    transition: .2s ease;
+    white-space: nowrap;
+}
+.hero-action-btn:hover { background: #f4f7fb; transform: translateY(-2px); }
+
+@media print {
+    .sidebar, .stats, .row-actions, .action-form, .no-print { display: none !important; }
+    .main { margin-left: 0 !important; }
+}
+
 
 /* =====================================================
    EMPTY
@@ -1882,6 +1950,12 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
 </div>
 
 
+<div class="d-flex align-items-center gap-2">
+
+<button type="button" class="hero-action-btn no-print" onclick="window.print()">
+    <i class="bi bi-printer me-1"></i> Print List
+</button>
+
 <div class="admin-badge">
 
 <i class="bi bi-shield-check text-primary me-1"></i>
@@ -1889,6 +1963,8 @@ require_once __DIR__ . '/../includes/admin_sidebar.php';
 <?= e($_SESSION['username'] ?? 'Administrator') ?>
 
 <small style="display:block; font-weight:500; color:#64748b; font-size:9px; margin-top:2px;"><?= e($_SESSION['email'] ?? '') ?></small>
+
+</div>
 
 </div>
 
@@ -2367,6 +2443,26 @@ Reason:
 ================================================== -->
 
 <td>
+
+<div class="row-actions">
+
+<a
+    href="appointment-view.php?id=<?= (int)$appointment['appointment_id'] ?>"
+    class="icon-btn view"
+    title="View details"
+>
+    <i class="bi bi-eye"></i>
+</a>
+
+<form method="POST" style="display:inline;" onsubmit="return confirm('Delete this appointment record? This cannot be undone.');">
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="appointment_id" value="<?= (int)$appointment['appointment_id'] ?>">
+    <button type="submit" class="icon-btn delete" title="Delete">
+        <i class="bi bi-trash"></i>
+    </button>
+</form>
+
+</div>
 
 <form
     method="POST"

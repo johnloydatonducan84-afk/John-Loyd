@@ -1534,6 +1534,11 @@ body {
 
 }
 
+@media print {
+    .sidebar, .stats-grid, .no-print, .action-buttons, th:last-child, td:last-child { display: none !important; }
+    .main { margin-left: 0 !important; }
+}
+
 </style>
 
 </head>
@@ -1718,19 +1723,28 @@ body {
             </div>
 
 
-            <button
-                class="add-btn"
-                data-bs-toggle="modal"
-                data-bs-target="#scheduleModal"
-                onclick="openCreateModal()"
-                <?= empty($services) ? 'disabled' : '' ?>
-            >
+            <div class="d-flex align-items-center gap-2">
 
-                <i class="fa-solid fa-plus me-1"></i>
+                <button type="button" class="add-btn no-print" style="background:linear-gradient(135deg,#198754,#0d6efd);" onclick="window.print()">
+                    <i class="fa-solid fa-print me-1"></i>
+                    Print List
+                </button>
 
-                Add Schedule
+                <button
+                    class="add-btn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#scheduleModal"
+                    onclick="openCreateModal()"
+                    <?= empty($services) ? 'disabled' : '' ?>
+                >
 
-            </button>
+                    <i class="fa-solid fa-plus me-1"></i>
+
+                    Add Schedule
+
+                </button>
+
+            </div>
 
 
         </div>

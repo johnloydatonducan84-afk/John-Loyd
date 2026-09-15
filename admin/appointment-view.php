@@ -17,6 +17,14 @@ if ($id <= 0) {
 |--------------------------------------------------------------------------
 */
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
+
+    $pdo->prepare("DELETE FROM appointments WHERE id = :id")->execute(['id' => $id]);
+
+    header('Location: appointments.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
 
     $new_status = $_POST['status'] ?? '';
@@ -236,6 +244,12 @@ function statusClass($status)
             .detail-grid { grid-template-columns: 1fr; }
         }
 
+        @media print {
+            .sidebar, .topbar, .action-row form, .no-print { display: none !important; }
+            .main { margin-left: 0 !important; }
+            .section-card { box-shadow: none !important; border: none !important; }
+        }
+
     </style>
 
 </head>
@@ -269,9 +283,14 @@ function statusClass($status)
 
     <section class="content">
 
-        <a href="appointments.php" class="back-link">
-            <i class="fa-solid fa-arrow-left"></i> Back to Appointments
-        </a>
+        <div class="d-flex justify-content-between align-items-center no-print">
+            <a href="appointments.php" class="back-link">
+                <i class="fa-solid fa-arrow-left"></i> Back to Appointments
+            </a>
+            <button type="button" class="btn-action" style="background:#0d6efd; color:#fff;" onclick="window.print()">
+                <i class="fa-solid fa-print me-1"></i> Print
+            </button>
+        </div>
 
         <div class="section-card">
 
@@ -364,6 +383,11 @@ function statusClass($status)
                     </form>
 
                 <?php endif; ?>
+
+                <form method="post" class="no-print" onsubmit="return confirm('Delete this appointment record? This cannot be undone.');">
+                    <input type="hidden" name="action" value="delete">
+                    <button type="submit" class="btn-action" style="background:#fff0f0; color:#b42318;"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+                </form>
 
             </div>
 

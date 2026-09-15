@@ -2026,6 +2026,11 @@ function notification_icon(
             }
         }
 
+        @media print {
+            .sidebar, .notif-actions, .filter-tabs, .no-print { display: none !important; }
+            .main { margin-left: 0 !important; }
+        }
+
     </style>
 
 </head>
@@ -2320,39 +2325,48 @@ function notification_icon(
             </div>
 
 
-            <?php if (
-                $readColumn !== null &&
-                $unread_count > 0
-            ): ?>
+            <div class="d-flex align-items-center gap-2">
 
-                <form
-                    method="post"
-                    class="mark-form"
-                >
+                <button type="button" class="mark-btn no-print" onclick="window.print()">
+                    <i class="fa-solid fa-print"></i>
+                    Print List
+                </button>
 
-                    <input
-                        type="hidden"
-                        name="action"
-                        value="mark_all_read"
+                <?php if (
+                    $readColumn !== null &&
+                    $unread_count > 0
+                ): ?>
+
+                    <form
+                        method="post"
+                        class="mark-form"
                     >
 
-                    <button
-                        type="submit"
-                        class="mark-btn"
-                    >
+                        <input
+                            type="hidden"
+                            name="action"
+                            value="mark_all_read"
+                        >
 
-                        <i
-                            class="fa-solid
-                            fa-check-double"
-                        ></i>
+                        <button
+                            type="submit"
+                            class="mark-btn"
+                        >
 
-                        Mark all as read
+                            <i
+                                class="fa-solid
+                                fa-check-double"
+                            ></i>
 
-                    </button>
+                            Mark all as read
 
-                </form>
+                        </button>
 
-            <?php endif; ?>
+                    </form>
+
+                <?php endif; ?>
+
+            </div>
 
 
         </div>

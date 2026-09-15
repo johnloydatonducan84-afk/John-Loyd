@@ -1116,6 +1116,11 @@ try {
             }
         }
 
+        @media print {
+            .sidebar, .service-actions, .no-print { display: none !important; }
+            .main { margin-left: 0 !important; }
+        }
+
     </style>
 
 </head>
@@ -1244,18 +1249,27 @@ try {
             </div>
 
 
-            <button
-                class="add-btn"
-                data-bs-toggle="modal"
-                data-bs-target="#serviceModal"
-                onclick="openCreateModal()"
-            >
+            <div class="d-flex align-items-center gap-2">
 
-                <i class="fa-solid fa-plus me-1"></i>
+                <button type="button" class="add-btn no-print" style="background:linear-gradient(135deg,#198754,#0d6efd);" onclick="window.print()">
+                    <i class="fa-solid fa-print me-1"></i>
+                    Print List
+                </button>
 
-                Add Service
+                <button
+                    class="add-btn"
+                    data-bs-toggle="modal"
+                    data-bs-target="#serviceModal"
+                    onclick="openCreateModal()"
+                >
 
-            </button>
+                    <i class="fa-solid fa-plus me-1"></i>
+
+                    Add Service
+
+                </button>
+
+            </div>
 
         </div>
 
