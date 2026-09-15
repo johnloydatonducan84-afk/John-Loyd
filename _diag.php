@@ -24,6 +24,12 @@ if (is_file($localConfigFile)) {
     }
 }
 
+$rawConfig = file_get_contents(__DIR__ . '/config/config.php');
+echo "config.php size=" . strlen($rawConfig) . " bytes, md5=" . md5($rawConfig) . "\n";
+echo "--- RAW config.php content ---\n";
+echo $rawConfig;
+echo "\n--- END RAW ---\n\n";
+
 try {
     $config = require __DIR__ . '/config/config.php';
     echo "config.php loaded OK\n";
