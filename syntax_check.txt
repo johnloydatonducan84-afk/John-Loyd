@@ -1,0 +1,253 @@
+﻿php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\generate.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\index.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\login.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\logout.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\register.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\setup.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\appointment-view.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\appointments.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\dashboard.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\index.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\notifications.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\patients.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\schedules.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\services.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\admin\settings.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\config\config.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\config\database.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\email\email-notification.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\includes\auth.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\includes\functions.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\patient\appointments.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\patient\book-appointment.php
+php : PHP Warning:  Module "zip" is already loaded in Unknown on line 0
+At line:1 char:118
++ ... tch '\\vendor\\' } | Foreach-Object { php -l $_.FullName 2>&1 }; $out ...
++                                           ~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PHP Warning:  M...known on line 0 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+Warning: Module "zip" is already loaded in Unknown on line 0
+No syntax errors detected in C:\xampp\htdocs\caresched\patient\dashboard.php

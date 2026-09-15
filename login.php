@@ -66,8 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     password,
                     status
                 FROM users
-                WHERE email = :email
-                   OR username = :username
+                WHERE (email = :email OR username = :username)
+                  AND role = 'patient'
                 LIMIT 1
             ");
 
@@ -112,35 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
                 /*
-                 * Patient login
+                 * Patient login only for this portal.
                  */
-
                 if ($user['role'] === 'patient') {
-
                     redirect('/caresched/patient/dashboard.php');
-
-                }
-
-
-                /*
-                 * Admin login
-                 */
-
-                elseif ($user['role'] === 'admin') {
-
-                    redirect('/caresched/admin/');
-
-                }
-
-
-                /*
-                 * Other RHU staff
-                 */
-
-                else {
-
-                    redirect('/caresched/patient/dashboard.php');
-
+                } else {
+                    $errors[] = 'Please use the admin login page for staff access.';
                 }
             }
 
@@ -964,6 +941,22 @@ $token = csrf_token();
             ></i>
 
             Back to CareSched
+
+        </a>
+
+
+        <!-- ADMIN LOGIN -->
+
+        <a
+            href="admin/"
+            class="back-home"
+        >
+
+            <i
+                class="fa-solid fa-user-shield me-1"
+            ></i>
+
+            Admin Login
 
         </a>
 

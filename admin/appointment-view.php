@@ -242,33 +242,11 @@ function statusClass($status)
 
 <body>
 
-<aside class="sidebar" id="sidebar">
+<!-- ======================================================
+     SIDEBAR (shared include)
+====================================================== -->
 
-    <div class="sidebar-brand">
-        <div class="brand-icon"><i class="fa-solid fa-heart-pulse"></i></div>
-        <div class="brand-text"><strong>CareSched</strong><span>Admin Portal</span></div>
-    </div>
-
-    <div class="menu-label">Main Menu</div>
-    <a href="dashboard.php" class="sidebar-link"><i class="fa-solid fa-grid-2"></i> Dashboard</a>
-    <a href="appointments.php" class="sidebar-link active"><i class="fa-solid fa-calendar-check"></i> Appointments</a>
-    <a href="patients.php" class="sidebar-link"><i class="fa-solid fa-users"></i> Patients</a>
-
-    <div class="menu-label">Management</div>
-    <a href="services.php" class="sidebar-link"><i class="fa-solid fa-stethoscope"></i> Services</a>
-    <a href="schedules.php" class="sidebar-link"><i class="fa-solid fa-calendar-days"></i> Schedules</a>
-    <a href="notifications.php" class="sidebar-link"><i class="fa-solid fa-bell"></i> Notifications</a>
-
-    <div class="menu-label">System</div>
-    <a href="settings.php" class="sidebar-link"><i class="fa-solid fa-gear"></i> Settings</a>
-
-    <div class="sidebar-bottom">
-        <a href="/caresched/logout.php" class="sidebar-link logout-link" onclick="return confirm('Are you sure you want to logout?');">
-            <i class="fa-solid fa-right-from-bracket"></i> Logout
-        </a>
-    </div>
-
-</aside>
+<?php require_once __DIR__ . '/../includes/admin_sidebar.php'; ?>
 
 <main class="main">
 

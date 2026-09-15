@@ -1,658 +1,757 @@
 <?php
 
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../email/email-notification.php';
 
 ensure_role('patient');
 
-$errors = [];
+$success = '';
+$error = '';
 
-/* =========================================================
-   GET LOGGED-IN PATIENT
-========================================================= */
 
-$user_id = $_SESSION['user_id'];
+// ======================================================
+// GET LOGGED-IN USER
+// ======================================================
+
+$userId = $_SESSION['user_id'] ?? 0;
+
+if (!$userId) {
+    header('Location: ../login.php');
+    exit;
+}
+
+
+// ======================================================
+// GET PATIENT INFORMATION
+// ======================================================
 
 $stmt = $pdo->prepare("
     SELECT
-        p.*,
-        u.email
+        p.id AS patient_id,
+        p.first_name,
+        p.middle_name,
+        p.last_name,
+        u.email,
+
+        CONCAT(
+            p.first_name,
+            CASE
+                WHEN p.middle_name IS NOT NULL
+                AND p.middle_name != ''
+                THEN CONCAT(' ', p.middle_name)
+                ELSE ''
+            END,
+            ' ',
+            p.last_name
+        ) AS full_name
+
     FROM patients p
+
     INNER JOIN users u
-        ON u.id = p.user_id
-    WHERE p.user_id = :user_id
+        ON p.user_id = u.id
+
+    WHERE p.user_id = ?
+
     LIMIT 1
 ");
 
-$stmt->execute([
-    'user_id' => $user_id
-]);
+$stmt->execute([$userId]);
 
 $patient = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$patient) {
-    die('Patient profile not found.');
+    die('Patient information not found.');
 }
 
 
-/* =========================================================
-   GET ACTIVE SERVICES
-========================================================= */
+// ======================================================
+// GET ACTIVE SERVICES
+// ======================================================
 
-$stmt = $pdo->query("
+$servicesStmt = $pdo->query("
     SELECT
         id,
         service_name,
-        description
+        description,
+        duration,
+        max_patients
+
     FROM services
+
     WHERE status = 'active'
+
     ORDER BY service_name ASC
 ");
 
-$serviceRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$services = $servicesStmt->fetchAll(PDO::FETCH_ASSOC);
 
 
-/* =========================================================
-   SERVICE ICONS
-========================================================= */
-
-$serviceIcons = [
-
-    'General Consultation'
-        => 'fa-stethoscope',
-
-    'Prenatal Care'
-        => 'fa-person-pregnant',
-
-    'Postnatal Care'
-        => 'fa-baby',
-
-    'Vaccination'
-        => 'fa-syringe',
-
-    'Maternal and Child Health'
-        => 'fa-children',
-
-    'Family Planning'
-        => 'fa-people-roof',
-
-    'Medical Check-up'
-        => 'fa-heart-pulse',
-
-    'Health Certificate'
-        => 'fa-file-medical'
-
-];
-
-
-/* =========================================================
-   BUILD SERVICE ARRAY
-========================================================= */
-
-$services = [];
-
-foreach ($serviceRows as $row) {
-
-    $services[$row['service_name']] = [
-
-        'id' => $row['id'],
-
-        'description' =>
-            $row['description']
-            ?: 'Healthcare service',
-
-        'icon' =>
-            $serviceIcons[$row['service_name']]
-            ?? 'fa-stethoscope'
-
-    ];
-
-}
-
-
-/* =========================================================
-   FORM VALUES
-========================================================= */
-
-$service = '';
-
-$appointment_date = '';
-
-$appointment_time = '';
-
-$reason = '';
-
-$contact_number =
-    $patient['contact_number'] ?? '';
-
-$notes = '';
-
-
-/* =========================================================
-   SUBMIT APPOINTMENT
-========================================================= */
+// ======================================================
+// SUBMIT APPOINTMENT
+// ======================================================
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    /* -----------------------------------------------------
-       CSRF
-    ----------------------------------------------------- */
+    $serviceId = trim($_POST['service_id'] ?? '');
+    $appointmentDate = trim($_POST['appointment_date'] ?? '');
+    $appointmentTime = trim($_POST['appointment_time'] ?? '');
+
+    // ==================================================
+    // VALIDATION
+    // ==================================================
 
     if (
-        !verify_csrf(
-            $_POST['csrf_token'] ?? ''
-        )
+        empty($serviceId) ||
+        empty($appointmentDate) ||
+        empty($appointmentTime)
     ) {
 
-        $errors[] =
-            'Invalid request. Please refresh the page and try again.';
+        $error = 'Please fill in all required fields.';
 
-    }
-
-
-    /* -----------------------------------------------------
-       GET FORM DATA
-    ----------------------------------------------------- */
-
-    $service =
-        trim(
-            $_POST['service'] ?? ''
-        );
-
-    $appointment_date =
-        $_POST['appointment_date'] ?? '';
-
-    $appointment_time =
-        $_POST['appointment_time'] ?? '';
-
-    $reason =
-        trim(
-            $_POST['reason'] ?? ''
-        );
-
-    $contact_number =
-        trim(
-            $_POST['contact_number'] ?? ''
-        );
-
-    $notes =
-        trim(
-            $_POST['notes'] ?? ''
-        );
-
-
-    /* -----------------------------------------------------
-       VALIDATION
-    ----------------------------------------------------- */
-
-    if (!$service) {
-
-        $errors[] =
-            'Please select a healthcare service.';
-
-    }
-
-
-    if (!$appointment_date) {
-
-        $errors[] =
-            'Please select an appointment date.';
-
-    }
-
-
-    if (!$appointment_time) {
-
-        $errors[] =
-            'Please select an appointment time.';
-
-    }
-
-
-    if (!$reason) {
-
-        $errors[] =
-            'Please provide a reason for your appointment.';
-
-    }
-
-
-    if (!$contact_number) {
-
-        $errors[] =
-            'Please provide your contact number.';
-
-    }
-
-
-    /* -----------------------------------------------------
-       VALIDATE DATE
-    ----------------------------------------------------- */
-
-    if ($appointment_date) {
-
-        $today = date('Y-m-d');
-
-        if ($appointment_date < $today) {
-
-            $errors[] =
-                'Appointment date cannot be in the past.';
-
-        }
-
-    }
-
-
-    /* -----------------------------------------------------
-       VALIDATE TIME
-    ----------------------------------------------------- */
-
-    if ($appointment_time) {
-
-        $time = strtotime($appointment_time);
-
-        $opening =
-            strtotime('08:00');
-
-        $closing =
-            strtotime('16:30');
-
-        if (
-            $time < $opening ||
-            $time > $closing
-        ) {
-
-            $errors[] =
-                'Appointment time must be between 8:00 AM and 4:30 PM.';
-
-        }
-
-    }
-
-
-    /* -----------------------------------------------------
-       GET SERVICE ID
-    ----------------------------------------------------- */
-
-    $service_id = null;
-
-    if (
-        $service &&
-        isset($services[$service])
-    ) {
-
-        $service_id =
-            $services[$service]['id'];
-
-    } elseif ($service) {
-
-        $errors[] =
-            'Invalid healthcare service selected.';
-
-    }
-
-
-    /* =====================================================
-       SAVE APPOINTMENT
-    ===================================================== */
-
-    if (empty($errors)) {
+    } else {
 
         try {
 
-            $pdo->beginTransaction();
+            // ==========================================
+            // VALIDATE SERVICE ID
+            // ==========================================
 
-
-            /* -------------------------------------------------
-               UPDATE PATIENT CONTACT NUMBER
-            ------------------------------------------------- */
-
-            $updatePatient =
-                $pdo->prepare("
-                    UPDATE patients
-                    SET contact_number = :contact_number
-                    WHERE id = :patient_id
-                ");
-
-            $updatePatient->execute([
-
-                'contact_number'
-                    => $contact_number,
-
-                'patient_id'
-                    => $patient['id']
-
-            ]);
-
-
-            /* -------------------------------------------------
-               CHECK DUPLICATE APPOINTMENT
-            ------------------------------------------------- */
-
-            $check =
-                $pdo->prepare("
-                    SELECT COUNT(*)
-                    FROM appointments
-                    WHERE patient_id = :patient_id
-                    AND appointment_date = :appointment_date
-                    AND appointment_time = :appointment_time
-                    AND status IN ('Pending', 'Approved')
-                ");
-
-            $check->execute([
-
-                'patient_id'
-                    => $patient['id'],
-
-                'appointment_date'
-                    => $appointment_date,
-
-                'appointment_time'
-                    => $appointment_time
-
-            ]);
-
-            $existing =
-                $check->fetchColumn();
-
-
-            if ($existing > 0) {
-
-                throw new Exception(
-                    'You already have an appointment at this date and time.'
-                );
-
+            if (!ctype_digit((string)$serviceId)) {
+                throw new Exception('Invalid service selected.');
             }
 
 
-            /* -------------------------------------------------
-               CHECK SAME TIME SLOT
-            ------------------------------------------------- */
+            // ==========================================
+            // VALIDATE DATE
+            // ==========================================
 
-            $checkSlot =
-                $pdo->prepare("
-                    SELECT COUNT(*)
-                    FROM appointments
-                    WHERE appointment_date = :appointment_date
-                    AND appointment_time = :appointment_time
-                    AND status IN ('Pending', 'Approved')
-                ");
+            $today = date('Y-m-d');
 
-            $checkSlot->execute([
-
-                'appointment_date'
-                    => $appointment_date,
-
-                'appointment_time'
-                    => $appointment_time
-
-            ]);
-
-            $slotCount =
-                $checkSlot->fetchColumn();
-
-
-            /*
-             * Maximum simultaneous appointments.
-             * Change this number if your RHU wants another limit.
-             */
-
-            $maximumAppointments = 10;
-
+            $dateObject = DateTime::createFromFormat(
+                'Y-m-d',
+                $appointmentDate
+            );
 
             if (
-                $slotCount >=
-                $maximumAppointments
+                !$dateObject ||
+                $dateObject->format('Y-m-d') !== $appointmentDate
             ) {
 
                 throw new Exception(
-                    'The selected time slot is already full. Please choose another time.'
+                    'Invalid appointment date.'
                 );
-
             }
 
 
-            /* -------------------------------------------------
-               INSERT APPOINTMENT
-            ------------------------------------------------- */
+            if ($appointmentDate < $today) {
 
-            $insert =
-                $pdo->prepare("
-                    INSERT INTO appointments
-                    (
-                        patient_id,
-                        service_id,
-                        schedule_id,
-                        appointment_date,
-                        appointment_time,
-                        reason,
-                        notes,
-                        status,
-                        created_at
-                    )
-                    VALUES
-                    (
-                        :patient_id,
-                        :service_id,
-                        NULL,
-                        :appointment_date,
-                        :appointment_time,
-                        :reason,
-                        :notes,
-                        'Pending',
-                        NOW()
-                    )
-                ");
+                throw new Exception(
+                    'Appointment date cannot be in the past.'
+                );
+            }
+
+
+            // ==========================================
+            // VALIDATE TIME
+            // ==========================================
+
+            $timeObject = DateTime::createFromFormat(
+                'H:i',
+                $appointmentTime
+            );
+
+            if (
+                !$timeObject ||
+                $timeObject->format('H:i') !== $appointmentTime
+            ) {
+
+                throw new Exception(
+                    'Invalid appointment time.'
+                );
+            }
+
+
+            // ==========================================
+            // RHU TIME RANGE
+            // 8:00 AM - 4:30 PM
+            // ==========================================
+
+            $selectedMinutes =
+                ((int)substr($appointmentTime, 0, 2) * 60)
+                + (int)substr($appointmentTime, 3, 2);
+
+            $openingMinutes = 8 * 60;
+            $closingMinutes = 16 * 60 + 30;
+
+
+            if (
+                $selectedMinutes < $openingMinutes ||
+                $selectedMinutes > $closingMinutes
+            ) {
+
+                throw new Exception(
+                    'Please select an appointment time between 8:00 AM and 4:30 PM.'
+                );
+            }
+
+
+            // ==========================================
+            // ONLY ALLOW 30-MINUTE INTERVALS
+            // ==========================================
+
+            $minutes = (int)substr(
+                $appointmentTime,
+                3,
+                2
+            );
+
+            if (
+                $minutes !== 0 &&
+                $minutes !== 30
+            ) {
+
+                throw new Exception(
+                    'Please select a valid 30-minute appointment slot.'
+                );
+            }
+
+
+            // ==========================================
+            // CONVERT TIME FOR DATABASE
+            // ==========================================
+
+            $databaseTime =
+                $appointmentTime . ':00';
+
+
+            // ==========================================
+            // GET SERVICE
+            // ==========================================
+
+            $serviceStmt = $pdo->prepare("
+                SELECT
+                    id,
+                    service_name,
+                    description,
+                    duration,
+                    max_patients
+
+                FROM services
+
+                WHERE id = ?
+
+                AND status = 'active'
+
+                LIMIT 1
+            ");
+
+            $serviceStmt->execute([
+                $serviceId
+            ]);
+
+            $service =
+                $serviceStmt->fetch(PDO::FETCH_ASSOC);
+
+
+            if (!$service) {
+
+                throw new Exception(
+                    'Selected service was not found or is inactive.'
+                );
+            }
+
+
+            $serviceName =
+                $service['service_name'];
+
+
+            // ==================================================
+            // DUPLICATE CHECK #1
+            //
+            // SAME PATIENT
+            // SAME SERVICE
+            // SAME DATE
+            // SAME TIME
+            //
+            // Rejected/Cancelled appointments are ignored.
+            // ==================================================
+
+            $duplicateStmt = $pdo->prepare("
+                SELECT
+                    id,
+                    status
+
+                FROM appointments
+
+                WHERE patient_id = ?
+
+                AND service_id = ?
+
+                AND appointment_date = ?
+
+                AND appointment_time = ?
+
+                AND status NOT IN (
+                    'Rejected',
+                    'Cancelled'
+                )
+
+                LIMIT 1
+            ");
+
+            $duplicateStmt->execute([
+
+                $patient['patient_id'],
+
+                $serviceId,
+
+                $appointmentDate,
+
+                $databaseTime
+
+            ]);
+
+            $duplicate =
+                $duplicateStmt->fetch(PDO::FETCH_ASSOC);
+
+
+            if ($duplicate) {
+
+                throw new Exception(
+                    'Duplicate appointment detected. You already have this appointment scheduled for '
+                    . date('F d, Y', strtotime($appointmentDate))
+                    . ' at '
+                    . date('h:i A', strtotime($appointmentTime))
+                    . '.'
+                );
+            }
+
+
+            // ==================================================
+            // DUPLICATE CHECK #2
+            //
+            // SAME PATIENT
+            // SAME DATE
+            // SAME TIME
+            //
+            // Even if the service is different, prevent the
+            // patient from booking two appointments at the
+            // exact same time.
+            // ==================================================
+
+            $sameTimeStmt = $pdo->prepare("
+                SELECT
+                    a.id,
+                    s.service_name
+
+                FROM appointments a
+
+                INNER JOIN services s
+                    ON a.service_id = s.id
+
+                WHERE a.patient_id = ?
+
+                AND a.appointment_date = ?
+
+                AND a.appointment_time = ?
+
+                AND a.status NOT IN (
+                    'Rejected',
+                    'Cancelled'
+                )
+
+                LIMIT 1
+            ");
+
+            $sameTimeStmt->execute([
+
+                $patient['patient_id'],
+
+                $appointmentDate,
+
+                $databaseTime
+
+            ]);
+
+            $sameTime =
+                $sameTimeStmt->fetch(PDO::FETCH_ASSOC);
+
+
+            if ($sameTime) {
+
+                throw new Exception(
+                    'You already have an appointment at '
+                    . date('h:i A', strtotime($appointmentTime))
+                    . ' on '
+                    . date('F d, Y', strtotime($appointmentDate))
+                    . '.'
+                );
+            }
+
+
+            // ==================================================
+            // DUPLICATE CHECK #3
+            //
+            // SCHEDULE AVAILABILITY
+            //
+            // The selected date/time must fall inside an active
+            // schedule the admin configured for this service, and
+            // that schedule must still have open slots (max_slots).
+            // ==================================================
+
+            $scheduleStmt = $pdo->prepare("
+                SELECT
+                    id,
+                    start_time,
+                    end_time,
+                    max_slots
+
+                FROM schedules
+
+                WHERE service_id = ?
+
+                AND schedule_date = ?
+
+                AND status = 'active'
+
+                AND ? >= start_time
+
+                AND ? < end_time
+
+                LIMIT 1
+            ");
+
+            $scheduleStmt->execute([
+
+                $serviceId,
+
+                $appointmentDate,
+
+                $databaseTime,
+
+                $databaseTime
+
+            ]);
+
+            $schedule =
+                $scheduleStmt->fetch(PDO::FETCH_ASSOC);
+
+
+            if (!$schedule) {
+
+                throw new Exception(
+                    'The selected time is not available for booking. Please choose a time within an available schedule.'
+                );
+            }
+
+
+            $scheduleBookedStmt = $pdo->prepare("
+                SELECT
+                    COUNT(*) AS total_booked
+
+                FROM appointments
+
+                WHERE schedule_id = ?
+
+                AND status NOT IN (
+                    'Rejected',
+                    'Cancelled'
+                )
+            ");
+
+            $scheduleBookedStmt->execute([
+
+                $schedule['id']
+
+            ]);
+
+            $scheduleBooked =
+                (int) $scheduleBookedStmt->fetchColumn();
+
+
+            if ($scheduleBooked >= (int) $schedule['max_slots']) {
+
+                throw new Exception(
+                    'This appointment time is already fully booked for '
+                    . htmlspecialchars($serviceName)
+                    . '. Please select another available time.'
+                );
+            }
+
+
+            // ==================================================
+            // INSERT APPOINTMENT
+            // ==================================================
+
+            $insert = $pdo->prepare("
+                INSERT INTO appointments (
+
+                    patient_id,
+                    service_id,
+                    schedule_id,
+                    appointment_date,
+                    appointment_time,
+                    status
+
+                )
+
+                VALUES (
+
+                    :patient_id,
+                    :service_id,
+                    :schedule_id,
+                    :appointment_date,
+                    :appointment_time,
+                    'Pending'
+
+                )
+            ");
+
 
             $insert->execute([
 
-                'patient_id'
-                    => $patient['id'],
+                ':patient_id' =>
+                    $patient['patient_id'],
 
-                'service_id'
-                    => $service_id,
+                ':service_id' =>
+                    $serviceId,
 
-                'appointment_date'
-                    => $appointment_date,
+                ':schedule_id' =>
+                    $schedule['id'],
 
-                'appointment_time'
-                    => $appointment_time,
+                ':appointment_date' =>
+                    $appointmentDate,
 
-                'reason'
-                    => $reason,
-
-                'notes'
-                    => $notes
+                ':appointment_time' =>
+                    $databaseTime
 
             ]);
 
 
-            /* -------------------------------------------------
-               GET NEW APPOINTMENT ID
-            ------------------------------------------------- */
-
-            $appointment_id =
+            $appointmentId =
                 $pdo->lastInsertId();
 
 
-            /* -------------------------------------------------
-               CREATE NOTIFICATION RECORD
-            ------------------------------------------------- */
+            // ==================================================
+            // SEND EMAIL TO ADMIN
+            // ==================================================
 
-            $notification =
-                $pdo->prepare("
-                    INSERT INTO notifications
-                    (
-                        appointment_id,
-                        patient_id,
-                        email,
-                        notification_type,
-                        subject,
-                        message,
-                        status,
-                        created_at
-                    )
-                    VALUES
-                    (
-                        :appointment_id,
-                        :patient_id,
-                        :email,
-                        :notification_type,
-                        :subject,
-                        :message,
-                        'Pending',
-                        NOW()
-                    )
-                ");
+            $adminEmail =
+                'johnloydatonducan84@gmail.com';
 
-            $notification->execute([
 
-                'appointment_id'
-                    => $appointment_id,
+            $emailSent = false;
 
-                'patient_id'
-                    => $patient['id'],
 
-                'email'
-                    => $patient['email'],
+            if (
+                function_exists(
+                    'sendAppointmentToAdmin'
+                )
+            ) {
 
-                'notification_type'
-                    => 'Appointment',
+                $emailSent =
+                    sendAppointmentToAdmin(
 
-                'subject'
-                    => 'CareSched Appointment Request',
+                        $adminEmail,
 
-                'message'
-                    =>
-                    'Your appointment request has been successfully submitted and is currently pending RHU approval.'
+                        $patient['full_name'],
+
+                        $serviceName,
+
+                        $appointmentDate,
+
+                        $appointmentTime
+
+                    );
+            }
+
+
+            // ==================================================
+            // SAVE NOTIFICATION
+            // ==================================================
+
+            $notificationMessage =
+                'A new appointment request has been submitted by '
+                . $patient['full_name']
+                . ' for '
+                . $serviceName
+                . ' on '
+                . date(
+                    'F d, Y',
+                    strtotime($appointmentDate)
+                )
+                . ' at '
+                . date(
+                    'h:i A',
+                    strtotime($appointmentTime)
+                )
+                . '.';
+
+
+            $notificationStatus =
+                $emailSent
+                    ? 'Sent'
+                    : 'Pending';
+
+
+            $sentAt =
+                $emailSent
+                    ? date('Y-m-d H:i:s')
+                    : null;
+
+
+            $notificationStmt = $pdo->prepare("
+                INSERT INTO notifications (
+
+                    appointment_id,
+                    patient_id,
+                    email,
+                    notification_type,
+                    subject,
+                    message,
+                    status,
+                    sent_at
+
+                )
+
+                VALUES (
+
+                    :appointment_id,
+                    :patient_id,
+                    :email,
+                    :notification_type,
+                    :subject,
+                    :message,
+                    :status,
+                    :sent_at
+
+                )
+            ");
+
+
+            $notificationStmt->execute([
+
+                ':appointment_id' =>
+                    $appointmentId,
+
+                ':patient_id' =>
+                    $patient['patient_id'],
+
+                ':email' =>
+                    $adminEmail,
+
+                ':notification_type' =>
+                    'Appointment',
+
+                ':subject' =>
+                    'CareSched Appointment Request',
+
+                ':message' =>
+                    $notificationMessage,
+
+                ':status' =>
+                    $notificationStatus,
+
+                ':sent_at' =>
+                    $sentAt
 
             ]);
 
 
-            /* -------------------------------------------------
-               COMMIT
-            ------------------------------------------------- */
+            // ==================================================
+            // SUCCESS MESSAGE
+            // ==================================================
 
-            $pdo->commit();
-
-
-            /* -------------------------------------------------
-               SUCCESS
-            ------------------------------------------------- */
-
-            flash(
-                'success',
-                'Appointment submitted successfully! Your request is now pending RHU approval.'
-            );
+            $success =
+                'Appointment submitted successfully!';
 
 
-            header(
-                'Location: dashboard.php'
-            );
+            if ($emailSent) {
 
-            exit;
+                $success .=
+                    ' The administrator has been notified by email.';
 
+            } else {
 
-        } catch (Exception $e) {
-
-
-            /* -------------------------------------------------
-               ROLLBACK
-            ------------------------------------------------- */
-
-            if (
-                $pdo->inTransaction()
-            ) {
-
-                $pdo->rollBack();
-
+                $success .=
+                    ' Email notification could not be sent.';
             }
 
 
-            /* -------------------------------------------------
-               LOG ERROR
-            ------------------------------------------------- */
-
-            error_log(
-                'CareSched Appointment Error: '
-                . $e->getMessage()
-            );
+            // Clear POST values
+            $_POST = [];
 
 
-            /*
-             * Show actual error temporarily while debugging.
-             * Once everything works, change this to:
-             *
-             * $errors[] =
-             * 'Unable to submit your appointment. Please try again later.';
-             */
+        } catch (PDOException $e) {
 
-            $errors[] =
+            $error =
+                'Database error: ' .
                 $e->getMessage();
 
+        } catch (Exception $e) {
+
+            $error =
+                $e->getMessage();
         }
-
     }
-
 }
 
-
-/* =========================================================
-   CSRF TOKEN
-========================================================= */
-
-$token =
-    csrf_token();
-
 ?>
-<!doctype html>
 
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
 
-<meta charset="utf-8">
+    <meta charset="UTF-8">
 
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>
-    Book Appointment - CareSched
-</title>
-
-
-<!-- Google Font -->
-
-<link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet"
->
+    <title>
+        Book Appointment | CareSched
+    </title>
 
 
-<!-- Font Awesome -->
+    <!-- Bootstrap -->
 
-<link
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-    rel="stylesheet"
->
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
 
 
-<!-- Bootstrap -->
+    <!-- Bootstrap Icons -->
 
-<link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    rel="stylesheet"
->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    >
+
+
+    <!-- Google Font -->
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
 
 
 <style>
-
-/* =========================================================
-   GLOBAL
-========================================================= */
 
 * {
     box-sizing: border-box;
@@ -662,48 +761,87 @@ body {
 
     margin: 0;
 
+    font-family: 'Inter', sans-serif;
+
     min-height: 100vh;
 
-    font-family:
-        'Inter',
-        sans-serif;
-
-    color: #172033;
-
     background:
+        linear-gradient(
+            135deg,
+            #eef6ff,
+            #f8fbff,
+            #eafaf6
+        );
 
-        radial-gradient(
-            circle at 10% 10%,
-            rgba(37, 99, 235, .08),
-            transparent 28%
-        ),
-
-        radial-gradient(
-            circle at 90% 90%,
-            rgba(14, 165, 233, .08),
-            transparent 30%
-        ),
-
-        #f8fafc;
+    color: #1e293b;
 }
 
 
-/* =========================================================
-   NAVBAR
-========================================================= */
+.background-shape {
 
-.navbar {
+    position: fixed;
 
-    min-height: 72px;
+    border-radius: 50%;
 
-    background:
-        rgba(255,255,255,.92);
+    filter: blur(80px);
 
-    backdrop-filter:
-        blur(18px);
+    opacity: .3;
 
-    border-bottom:
-        1px solid #e8eef6;
+    z-index: -1;
+}
+
+
+.shape-one {
+
+    width: 320px;
+    height: 320px;
+
+    background: #0d6efd;
+
+    top: -120px;
+    left: -100px;
+}
+
+
+.shape-two {
+
+    width: 350px;
+    height: 350px;
+
+    background: #20c997;
+
+    right: -120px;
+    bottom: -150px;
+}
+
+
+.page-wrapper {
+
+    min-height: 100vh;
+
+    padding: 30px 15px 40px;
+}
+
+
+.container-main {
+
+    max-width: 1100px;
+
+    margin: auto;
+}
+
+
+/* TOPBAR */
+
+.topbar {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 22px;
 }
 
 
@@ -713,25 +851,459 @@ body {
 
     align-items: center;
 
-    gap: 10px;
-
-    color: #172033;
-
-    font-size: 19px;
-
-    font-weight: 800;
+    gap: 12px;
 
     text-decoration: none;
-}
 
-
-.brand:hover {
-
-    color: #172033;
+    color: #0f172a;
 }
 
 
 .brand-icon {
+
+    width: 48px;
+
+    height: 48px;
+
+    border-radius: 15px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    color: white;
+
+    font-size: 22px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #0d6efd,
+            #0dcaf0
+        );
+
+    box-shadow:
+        0 10px 25px
+        rgba(13,110,253,.25);
+}
+
+
+.brand-name {
+
+    font-size: 21px;
+
+    font-weight: 800;
+}
+
+
+.brand-subtitle {
+
+    font-size: 11px;
+
+    color: #64748b;
+}
+
+
+.dashboard-btn {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding: 10px 16px;
+
+    border-radius: 12px;
+
+    text-decoration: none;
+
+    color: #334155;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    background:
+        rgba(255,255,255,.8);
+
+    border:
+        1px solid #e2e8f0;
+
+    transition: .25s;
+}
+
+
+.dashboard-btn:hover {
+
+    background: white;
+
+    color: #0d6efd;
+
+    transform: translateY(-2px);
+}
+
+
+/* HERO */
+
+.hero {
+
+    position: relative;
+
+    overflow: hidden;
+
+    border-radius: 25px;
+
+    padding: 30px;
+
+    margin-bottom: 22px;
+
+    color: white;
+
+    background:
+        linear-gradient(
+            135deg,
+            #0d6efd,
+            #0dcaf0
+        );
+
+    box-shadow:
+        0 20px 50px
+        rgba(13,110,253,.20);
+}
+
+
+.hero h1 {
+
+    margin: 0 0 8px;
+
+    font-size: 28px;
+
+    font-weight: 800;
+}
+
+
+.hero p {
+
+    margin: 0;
+
+    font-size: 14px;
+
+    opacity: .9;
+}
+
+
+.patient-pill {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    margin-top: 18px;
+
+    padding: 9px 14px;
+
+    border-radius: 50px;
+
+    background:
+        rgba(255,255,255,.15);
+
+    font-size: 13px;
+}
+
+
+/* MAIN CARD */
+
+.main-card {
+
+    overflow: hidden;
+
+    border-radius: 25px;
+
+    background:
+        rgba(255,255,255,.9);
+
+    border:
+        1px solid #e2e8f0;
+
+    box-shadow:
+        0 20px 60px
+        rgba(15,23,42,.08);
+}
+
+
+.form-section {
+
+    padding: 35px;
+}
+
+
+.section-title {
+
+    font-size: 19px;
+
+    font-weight: 800;
+}
+
+
+.section-description {
+
+    margin-top: 5px;
+
+    margin-bottom: 28px;
+
+    color: #64748b;
+
+    font-size: 13px;
+}
+
+
+/* ALERT */
+
+.custom-alert {
+
+    padding: 15px 17px;
+
+    border-radius: 14px;
+
+    font-size: 13px;
+
+    margin-bottom: 22px;
+}
+
+
+.success-alert {
+
+    color: #047857;
+
+    background: #ecfdf5;
+
+    border: 1px solid #a7f3d0;
+}
+
+
+.error-alert {
+
+    color: #be123c;
+
+    background: #fff1f2;
+
+    border: 1px solid #fecdd3;
+}
+
+
+/* FORM */
+
+.form-label {
+
+    color: #334155;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    margin-bottom: 8px;
+}
+
+
+.input-wrapper {
+
+    position: relative;
+}
+
+
+.input-icon {
+
+    position: absolute;
+
+    left: 16px;
+
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    z-index: 5;
+
+    color: #64748b;
+}
+
+
+.form-control,
+.form-select {
+
+    min-height: 53px;
+
+    border-radius: 13px;
+
+    border: 1px solid #dbe4ee;
+
+    background: white;
+
+    font-size: 14px;
+
+    transition: .25s;
+}
+
+
+.input-wrapper
+.form-control {
+
+    padding-left: 45px;
+}
+
+
+.input-wrapper
+.form-select {
+
+    padding-left: 45px;
+}
+
+
+.form-control:focus,
+.form-select:focus {
+
+    border-color: #0d6efd;
+
+    box-shadow:
+        0 0 0 4px
+        rgba(13,110,253,.10);
+}
+
+
+/* SERVICE INFO */
+
+.service-info {
+
+    display: none;
+
+    margin-top: 10px;
+
+    padding: 13px 15px;
+
+    border-radius: 13px;
+
+    background: #eff6ff;
+
+    border: 1px solid #dbeafe;
+}
+
+
+.service-info.show {
+
+    display: block;
+}
+
+
+.service-info-title {
+
+    color: #0d6efd;
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    margin-bottom: 3px;
+}
+
+
+.service-info-text {
+
+    margin: 0;
+
+    color: #64748b;
+
+    font-size: 12px;
+}
+
+
+/* SUBMIT */
+
+.submit-btn {
+
+    width: 100%;
+
+    min-height: 54px;
+
+    border: none;
+
+    border-radius: 14px;
+
+    color: white;
+
+    font-size: 14px;
+
+    font-weight: 700;
+
+    background:
+        linear-gradient(
+            135deg,
+            #0d6efd,
+            #0dcaf0
+        );
+
+    box-shadow:
+        0 12px 25px
+        rgba(13,110,253,.22);
+
+    transition: .25s;
+}
+
+
+.submit-btn:hover {
+
+    color: white;
+
+    transform: translateY(-2px);
+}
+
+
+/* INFO */
+
+.info-section {
+
+    height: 100%;
+
+    padding: 35px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f8fbff,
+            #eef7ff
+        );
+
+    border-left:
+        1px solid #e2e8f0;
+}
+
+
+.info-title {
+
+    font-size: 17px;
+
+    font-weight: 800;
+
+    margin-bottom: 22px;
+}
+
+
+.info-item {
+
+    display: flex;
+
+    gap: 13px;
+
+    margin-bottom: 21px;
+}
+
+
+.info-icon {
+
+    flex-shrink: 0;
 
     width: 40px;
 
@@ -743,97 +1315,25 @@ body {
 
     justify-content: center;
 
-    border-radius: 12px;
+    border-radius: 11px;
 
-    color: white;
+    color: #0d6efd;
 
-    background:
-        linear-gradient(
-            135deg,
-            #2563eb,
-            #0ea5e9
-        );
+    background: #dbeafe;
 }
 
 
-.brand span {
+.info-item h6 {
 
-    color: #2563eb;
+    margin: 0 0 4px;
+
+    font-size: 13px;
+
+    font-weight: 700;
 }
 
 
-.back-link {
-
-    color: #64748b;
-
-    font-size: 11px;
-
-    font-weight: 600;
-
-    text-decoration: none;
-}
-
-
-.back-link:hover {
-
-    color: #2563eb;
-}
-
-
-/* =========================================================
-   PAGE
-========================================================= */
-
-.page {
-
-    padding:
-        45px 0 70px;
-}
-
-
-.page-heading {
-
-    margin-bottom: 25px;
-}
-
-
-.page-heading .label {
-
-    display: inline-flex;
-
-    align-items: center;
-
-    gap: 7px;
-
-    margin-bottom: 10px;
-
-    color: #2563eb;
-
-    font-size: 10px;
-
-    font-weight: 800;
-
-    text-transform: uppercase;
-
-    letter-spacing: 1.3px;
-}
-
-
-.page-heading h1 {
-
-    margin-bottom: 8px;
-
-    color: #172033;
-
-    font-size: 29px;
-
-    font-weight: 800;
-
-    letter-spacing: -.8px;
-}
-
-
-.page-heading p {
+.info-item p {
 
     margin: 0;
 
@@ -841,667 +1341,117 @@ body {
 
     font-size: 12px;
 
-    line-height: 1.7;
+    line-height: 1.5;
 }
 
 
-/* =========================================================
-   BOOKING CARD
-========================================================= */
+.email-box {
 
-.booking-card {
+    margin-top: 25px;
 
-    padding: 28px;
-
-    border:
-        1px solid #e7edf5;
-
-    border-radius: 20px;
-
-    background: white;
-
-    box-shadow:
-        0 15px 45px
-        rgba(15,23,42,.06);
-}
-
-
-.card-title {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 10px;
-
-    margin-bottom: 22px;
-
-    color: #1e293b;
-
-    font-size: 14px;
-
-    font-weight: 800;
-}
-
-
-.card-title-icon {
-
-    width: 36px;
-
-    height: 36px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    border-radius: 10px;
-
-    color: #2563eb;
-
-    background: #eff6ff;
-}
-
-
-/* =========================================================
-   PATIENT BOX
-========================================================= */
-
-.patient-box {
-
-    padding: 18px;
-
-    margin-bottom: 25px;
-
-    border:
-        1px solid #dbeafe;
+    padding: 16px;
 
     border-radius: 15px;
 
-    background:
-        linear-gradient(
-            135deg,
-            #f8fbff,
-            #eff6ff
-        );
+    background: white;
+
+    border: 1px solid #e2e8f0;
 }
 
 
-.patient-header {
+.email-box small {
 
-    display: flex;
-
-    align-items: center;
-
-    gap: 12px;
-}
-
-
-.patient-avatar {
-
-    width: 43px;
-
-    height: 43px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    border-radius: 13px;
-
-    color: white;
-
-    background:
-        linear-gradient(
-            135deg,
-            #2563eb,
-            #0ea5e9
-        );
-
-    font-size: 16px;
-}
-
-
-.patient-name {
-
-    color: #1e293b;
-
-    font-size: 12px;
-
-    font-weight: 800;
-}
-
-
-.patient-email {
-
-    margin-top: 3px;
+    display: block;
 
     color: #64748b;
 
-    font-size: 10px;
+    font-size: 11px;
+
+    margin-bottom: 5px;
 }
 
 
-.patient-details {
+.email-box strong {
 
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, 1fr);
-
-    gap: 10px;
-
-    margin-top: 15px;
-
-    padding-top: 15px;
-
-    border-top:
-        1px solid #dbeafe;
-}
-
-
-.detail-label {
-
-    margin-bottom: 4px;
-
-    color: #94a3b8;
-
-    font-size: 8px;
-
-    font-weight: 700;
-
-    text-transform: uppercase;
-}
-
-
-.detail-value {
+    display: block;
 
     color: #334155;
-
-    font-size: 10px;
-
-    font-weight: 600;
-}
-
-
-/* =========================================================
-   FORM
-========================================================= */
-
-.form-label {
-
-    margin-bottom: 7px;
-
-    color: #334155;
-
-    font-size: 10px;
-
-    font-weight: 700;
-}
-
-
-.required {
-
-    color: #ef4444;
-}
-
-
-.input-wrapper {
-
-    position: relative;
-}
-
-
-.input-wrapper > i {
-
-    position: absolute;
-
-    left: 14px;
-
-    top: 23px;
-
-    transform:
-        translateY(-50%);
-
-    color: #94a3b8;
 
     font-size: 12px;
 
-    z-index: 2;
+    word-break: break-word;
 }
 
 
-.form-control,
-.form-select {
+.footer {
 
-    min-height: 46px;
-
-    padding:
-        10px 14px 10px 40px;
-
-    border:
-        1px solid #dbe4f0;
-
-    border-radius: 11px;
-
-    color: #1e293b;
-
-    background: #f8fafc;
-
-    font-size: 11px;
-
-    box-shadow: none;
-
-    transition: .2s ease;
-}
-
-
-.form-control:focus,
-.form-select:focus {
-
-    border-color: #2563eb;
-
-    background: white;
-
-    box-shadow:
-        0 0 0 4px
-        rgba(37,99,235,.07);
-}
-
-
-textarea.form-control {
-
-    min-height: 105px;
-
-    resize: vertical;
-
-    padding-top: 13px;
-}
-
-
-.form-select {
-
-    cursor: pointer;
-}
-
-
-/* =========================================================
-   SERVICE GRID
-========================================================= */
-
-.service-grid {
-
-    display: grid;
-
-    grid-template-columns:
-        repeat(2, 1fr);
-
-    gap: 10px;
-
-    margin-bottom: 20px;
-}
-
-
-.service-option {
-
-    position: relative;
-}
-
-
-.service-option input {
-
-    position: absolute;
-
-    opacity: 0;
-
-    pointer-events: none;
-}
-
-
-.service-option label {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 10px;
-
-    min-height: 65px;
-
-    padding: 11px;
-
-    border:
-        1px solid #e2e8f0;
-
-    border-radius: 12px;
-
-    cursor: pointer;
-
-    background: white;
-
-    transition: .2s ease;
-}
-
-
-.service-option label:hover {
-
-    border-color: #bfdbfe;
-
-    background: #f8fbff;
-}
-
-
-.service-option input:checked + label {
-
-    border-color: #2563eb;
-
-    background: #eff6ff;
-
-    box-shadow:
-        0 0 0 2px
-        rgba(37,99,235,.06);
-}
-
-
-.service-icon {
-
-    width: 36px;
-
-    height: 36px;
-
-    min-width: 36px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    border-radius: 9px;
-
-    color: #2563eb;
-
-    background: #eff6ff;
-
-    font-size: 13px;
-}
-
-
-.service-name {
-
-    color: #334155;
-
-    font-size: 10px;
-
-    font-weight: 700;
-}
-
-
-.service-description {
-
-    margin-top: 3px;
-
-    color: #94a3b8;
-
-    font-size: 8px;
-
-    line-height: 1.4;
-}
-
-
-/* =========================================================
-   INFO BOX
-========================================================= */
-
-.info-box {
-
-    display: flex;
-
-    gap: 10px;
-
-    padding: 13px;
+    text-align: center;
 
     margin-top: 20px;
 
-    border-radius: 11px;
-
-    color: #475569;
-
-    background: #f8fafc;
-
-    font-size: 9px;
-
-    line-height: 1.6;
-}
-
-
-.info-box i {
-
-    color: #2563eb;
-
-    font-size: 12px;
-}
-
-
-/* =========================================================
-   SUBMIT BUTTON
-========================================================= */
-
-.submit-button {
-
-    width: 100%;
-
-    min-height: 48px;
-
-    margin-top: 22px;
-
-    border: none;
-
-    border-radius: 12px;
-
-    color: white;
-
-    background:
-        linear-gradient(
-            135deg,
-            #2563eb,
-            #1d4ed8
-        );
-
-    font-size: 11px;
-
-    font-weight: 700;
-
-    box-shadow:
-        0 10px 22px
-        rgba(37,99,235,.18);
-
-    transition: .25s ease;
-
-    cursor: pointer;
-}
-
-
-.submit-button:hover {
-
-    transform:
-        translateY(-2px);
-
-    box-shadow:
-        0 14px 28px
-        rgba(37,99,235,.25);
-}
-
-
-/* =========================================================
-   SIDE CARD
-========================================================= */
-
-.side-card {
-
-    padding: 23px;
-
-    border:
-        1px solid #e7edf5;
-
-    border-radius: 18px;
-
-    background: white;
-
-    box-shadow:
-        0 12px 35px
-        rgba(15,23,42,.05);
-
-    margin-bottom: 18px;
-}
-
-
-.side-card h5 {
-
-    margin-bottom: 17px;
-
-    color: #1e293b;
-
-    font-size: 13px;
-
-    font-weight: 800;
-}
-
-
-.schedule-row {
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 11px;
-
-    padding: 11px 0;
-
-    border-bottom:
-        1px solid #eef2f7;
-}
-
-
-.schedule-row:last-child {
-
-    border-bottom: none;
-}
-
-
-.schedule-icon {
-
-    width: 34px;
-
-    height: 34px;
-
-    display: flex;
-
-    align-items: center;
-
-    justify-content: center;
-
-    border-radius: 9px;
-
-    color: #2563eb;
-
-    background: #eff6ff;
-
-    font-size: 11px;
-}
-
-
-.schedule-row strong {
-
-    display: block;
-
-    color: #334155;
-
-    font-size: 10px;
-}
-
-
-.schedule-row span {
-
-    display: block;
-
-    margin-top: 2px;
-
     color: #94a3b8;
 
-    font-size: 8px;
+    font-size: 11px;
 }
 
 
-/* =========================================================
-   ALERT
-========================================================= */
-
-.alert {
-
-    border-radius: 11px;
-
-    font-size: 10px;
-}
-
-
-.alert ul {
-
-    padding-left: 18px;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
+/* MOBILE */
 
 @media (max-width: 767px) {
 
-    .page {
+    .page-wrapper {
 
-        padding:
-            30px 0 50px;
+        padding: 20px 12px 30px;
     }
 
+    .brand-subtitle {
 
-    .booking-card {
-
-        padding: 20px;
+        display: none;
     }
 
+    .brand-name {
 
-    .patient-details {
-
-        grid-template-columns:
-            1fr;
+        font-size: 18px;
     }
 
+    .brand-icon {
 
-    .service-grid {
-
-        grid-template-columns:
-            1fr;
+        width: 43px;
+        height: 43px;
     }
 
-}
+    .dashboard-btn {
 
+        padding: 9px 12px;
 
-@media (max-width: 480px) {
-
-    .brand {
-
-        font-size: 17px;
+        font-size: 12px;
     }
 
+    .hero {
 
-    .page-heading h1 {
+        padding: 25px 21px;
 
-        font-size: 25px;
+        border-radius: 20px;
     }
 
+    .hero h1 {
+
+        font-size: 23px;
+    }
+
+    .form-section,
+    .info-section {
+
+        padding: 25px 20px;
+    }
+
+    .info-section {
+
+        border-left: none;
+
+        border-top:
+            1px solid #e2e8f0;
+    }
 }
 
 </style>
@@ -1512,1004 +1462,764 @@ textarea.form-control {
 <body>
 
 
-<!-- =========================================================
-     NAVBAR
-========================================================= -->
-
-<nav class="navbar">
-
-    <div class="container">
-
-        <div class="d-flex align-items-center justify-content-between">
-
-            <a
-                href="dashboard.php"
-                class="brand"
-            >
-
-                <div class="brand-icon">
-
-                    <i
-                        class="fa-solid fa-heart-pulse"
-                    ></i>
-
-                </div>
-
-                Care<span>Sched</span>
-
-            </a>
+<div class="background-shape shape-one"></div>
+<div class="background-shape shape-two"></div>
 
 
-            <a
-                href="dashboard.php"
-                class="back-link"
-            >
+<div class="page-wrapper">
 
-                <i
-                    class="fa-solid fa-arrow-left me-1"
-                ></i>
+<div class="container-main">
 
-                Dashboard
 
-            </a>
+<!-- ======================================================
+     TOP BAR
+====================================================== -->
+
+<div class="topbar">
+
+    <a
+        href="dashboard.php"
+        class="brand"
+    >
+
+        <div class="brand-icon">
+
+            <i class="bi bi-heart-pulse-fill"></i>
 
         </div>
 
-    </div>
+        <div>
 
-</nav>
+            <div class="brand-name">
+                CareSched
+            </div>
 
-
-<!-- =========================================================
-     PAGE
-========================================================= -->
-
-<main class="page">
-
-<div class="container">
-
-
-    <!-- PAGE HEADING -->
-
-    <div class="page-heading">
-
-        <div class="label">
-
-            <i
-                class="fa-solid fa-calendar-check"
-            ></i>
-
-            Appointment Scheduling
-
-        </div>
-
-
-        <h1>
-            Book an Appointment
-        </h1>
-
-
-        <p>
-
-            Choose your healthcare service and
-            preferred schedule at the Rural Health Unit.
-
-        </p>
-
-    </div>
-
-
-    <div class="row g-4">
-
-
-        <!-- =================================================
-             FORM
-        ================================================== -->
-
-        <div class="col-lg-8">
-
-            <div class="booking-card">
-
-
-                <div class="card-title">
-
-                    <div class="card-title-icon">
-
-                        <i
-                            class="fa-solid fa-calendar-plus"
-                        ></i>
-
-                    </div>
-
-                    Appointment Information
-
-                </div>
-
-
-                <!-- ERRORS -->
-
-                <?php if (!empty($errors)): ?>
-
-                    <div
-                        class="alert alert-danger"
-                        role="alert"
-                    >
-
-                        <strong>
-                            Please check the following:
-                        </strong>
-
-                        <ul class="mb-0 mt-2">
-
-                            <?php foreach ($errors as $error): ?>
-
-                                <li>
-                                    <?= e($error) ?>
-                                </li>
-
-                            <?php endforeach; ?>
-
-                        </ul>
-
-                    </div>
-
-                <?php endif; ?>
-
-
-                <!-- SUCCESS -->
-
-                <?php if ($msg = flash('success')): ?>
-
-                    <div
-                        class="alert alert-success"
-                        role="alert"
-                    >
-
-                        <i
-                            class="fa-solid fa-circle-check me-2"
-                        ></i>
-
-                        <?= e($msg) ?>
-
-                    </div>
-
-                <?php endif; ?>
-
-
-                <!-- PATIENT INFORMATION -->
-
-                <div class="patient-box">
-
-                    <div class="patient-header">
-
-                        <div class="patient-avatar">
-
-                            <i
-                                class="fa-solid fa-user"
-                            ></i>
-
-                        </div>
-
-
-                        <div>
-
-                            <div class="patient-name">
-
-                                <?= e(
-                                    trim(
-                                        $patient['first_name']
-                                        . ' '
-                                        . ($patient['middle_name'] ?? '')
-                                        . ' '
-                                        . $patient['last_name']
-                                    )
-                                ) ?>
-
-                            </div>
-
-
-                            <div class="patient-email">
-
-                                <?= e(
-                                    $patient['email']
-                                ) ?>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-
-                    <div class="patient-details">
-
-
-                        <div>
-
-                            <div class="detail-label">
-                                Age
-                            </div>
-
-                            <div class="detail-value">
-
-                                <?= e(
-                                    $patient['age']
-                                    ?? 'N/A'
-                                ) ?>
-
-                            </div>
-
-                        </div>
-
-
-                        <div>
-
-                            <div class="detail-label">
-                                Sex
-                            </div>
-
-                            <div class="detail-value">
-
-                                <?= e(
-                                    $patient['sex']
-                                    ?? 'N/A'
-                                ) ?>
-
-                            </div>
-
-                        </div>
-
-
-                        <div>
-
-                            <div class="detail-label">
-                                Contact
-                            </div>
-
-                            <div class="detail-value">
-
-                                <?= e(
-                                    $patient['contact_number']
-                                    ?? 'N/A'
-                                ) ?>
-
-                            </div>
-
-                        </div>
-
-
-                    </div>
-
-                </div>
-
-
-                <!-- =================================================
-                     APPOINTMENT FORM
-                ================================================== -->
-
-                <form
-                    method="POST"
-                    action=""
-                    novalidate
-                >
-
-                    <input
-                        type="hidden"
-                        name="csrf_token"
-                        value="<?= e($token) ?>"
-                    >
-
-
-                    <!-- SERVICE -->
-
-                    <div class="mb-4">
-
-                        <label class="form-label">
-
-                            Healthcare Service
-
-                            <span class="required">
-                                *
-                            </span>
-
-                        </label>
-
-
-                        <div class="service-grid">
-
-
-                            <?php if (empty($services)): ?>
-
-                                <div
-                                    class="alert alert-warning"
-                                    style="grid-column:1/-1;"
-                                >
-
-                                    No active healthcare services
-                                    are currently available.
-
-                                </div>
-
-                            <?php endif; ?>
-
-
-                            <?php foreach (
-                                $services
-                                as $serviceName
-                                => $serviceInfo
-                            ): ?>
-
-
-                                <div class="service-option">
-
-                                    <input
-                                        type="radio"
-                                        name="service"
-                                        id="<?= e(
-                                            'service_' .
-                                            md5($serviceName)
-                                        ) ?>"
-                                        value="<?= e(
-                                            $serviceName
-                                        ) ?>"
-                                        <?= $service ===
-                                            $serviceName
-                                            ? 'checked'
-                                            : '' ?>
-                                        required
-                                    >
-
-
-                                    <label
-                                        for="<?= e(
-                                            'service_' .
-                                            md5($serviceName)
-                                        ) ?>"
-                                    >
-
-                                        <div class="service-icon">
-
-                                            <i
-                                                class="fa-solid <?= e(
-                                                    $serviceInfo['icon']
-                                                ) ?>"
-                                            ></i>
-
-                                        </div>
-
-
-                                        <div>
-
-                                            <div class="service-name">
-
-                                                <?= e(
-                                                    $serviceName
-                                                ) ?>
-
-                                            </div>
-
-
-                                            <div
-                                                class="service-description"
-                                            >
-
-                                                <?= e(
-                                                    $serviceInfo[
-                                                        'description'
-                                                    ]
-                                                ) ?>
-
-                                            </div>
-
-                                        </div>
-
-                                    </label>
-
-                                </div>
-
-
-                            <?php endforeach; ?>
-
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- DATE + TIME -->
-
-                    <div class="row">
-
-
-                        <div class="col-md-6 mb-3">
-
-                            <label class="form-label">
-
-                                Appointment Date
-
-                                <span class="required">
-                                    *
-                                </span>
-
-                            </label>
-
-
-                            <div class="input-wrapper">
-
-                                <i
-                                    class="fa-solid fa-calendar"
-                                ></i>
-
-
-                                <input
-                                    type="date"
-                                    name="appointment_date"
-                                    class="form-control"
-                                    value="<?= e(
-                                        $appointment_date
-                                    ) ?>"
-                                    min="<?= date('Y-m-d') ?>"
-                                    required
-                                >
-
-                            </div>
-
-                        </div>
-
-
-                        <div class="col-md-6 mb-3">
-
-                            <label class="form-label">
-
-                                Preferred Time
-
-                                <span class="required">
-                                    *
-                                </span>
-
-                            </label>
-
-
-                            <div class="input-wrapper">
-
-                                <i
-                                    class="fa-solid fa-clock"
-                                ></i>
-
-
-                                <input
-                                    type="time"
-                                    name="appointment_time"
-                                    class="form-control"
-                                    value="<?= e(
-                                        $appointment_time
-                                    ) ?>"
-                                    min="08:00"
-                                    max="16:30"
-                                    required
-                                >
-
-                            </div>
-
-                        </div>
-
-
-                    </div>
-
-
-                    <!-- REASON -->
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-
-                            Reason for Appointment
-
-                            <span class="required">
-                                *
-                            </span>
-
-                        </label>
-
-
-                        <div class="input-wrapper">
-
-                            <i
-                                class="fa-solid fa-notes-medical"
-                            ></i>
-
-
-                            <textarea
-                                name="reason"
-                                class="form-control"
-                                placeholder="Briefly describe the reason for your appointment..."
-                                required
-                            ><?= e($reason) ?></textarea>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- CONTACT -->
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-
-                            Contact Number
-
-                            <span class="required">
-                                *
-                            </span>
-
-                        </label>
-
-
-                        <div class="input-wrapper">
-
-                            <i
-                                class="fa-solid fa-phone"
-                            ></i>
-
-
-                            <input
-                                type="tel"
-                                name="contact_number"
-                                class="form-control"
-                                value="<?= e(
-                                    $contact_number
-                                ) ?>"
-                                placeholder="09XXXXXXXXX"
-                                required
-                            >
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- NOTES -->
-
-                    <div class="mb-3">
-
-                        <label class="form-label">
-
-                            Additional Notes
-
-                            <span
-                                style="
-                                    font-weight:400;
-                                    color:#94a3b8;
-                                "
-                            >
-
-                                (Optional)
-
-                            </span>
-
-                        </label>
-
-
-                        <div class="input-wrapper">
-
-                            <i
-                                class="fa-solid fa-message"
-                            ></i>
-
-
-                            <textarea
-                                name="notes"
-                                class="form-control"
-                                placeholder="Add any additional information..."
-                            ><?= e($notes) ?></textarea>
-
-                        </div>
-
-                    </div>
-
-
-                    <!-- INFORMATION -->
-
-                    <div class="info-box">
-
-                        <i
-                            class="fa-solid fa-circle-info"
-                        ></i>
-
-
-                        <span>
-
-                            Your appointment will initially be
-                            marked as <strong>Pending</strong>.
-                            RHU staff will review your request.
-                            You will receive an email notification
-                            once your appointment status is updated.
-
-                        </span>
-
-                    </div>
-
-
-                    <!-- SUBMIT -->
-
-                    <button
-                        type="submit"
-                        class="submit-button"
-                    >
-
-                        <i
-                            class="fa-solid fa-calendar-check me-2"
-                        ></i>
-
-                        Submit Appointment Request
-
-                    </button>
-
-
-                </form>
-
-
+            <div class="brand-subtitle">
+                Healthcare Appointment System
             </div>
 
         </div>
 
+    </a>
 
-        <!-- =================================================
-             SIDE INFORMATION
-        ================================================== -->
 
-        <div class="col-lg-4">
+    <a
+        href="dashboard.php"
+        class="dashboard-btn"
+    >
 
+        <i class="bi bi-grid-1x2-fill"></i>
 
-            <!-- RHU SCHEDULE -->
+        Dashboard
 
-            <div class="side-card">
+    </a>
 
-                <h5>
+</div>
 
-                    <i
-                        class="fa-solid fa-clock me-2"
-                        style="color:#2563eb;"
-                    ></i>
 
-                    RHU Schedule
+<!-- ======================================================
+     HERO
+====================================================== -->
 
-                </h5>
+<div class="hero">
 
+    <h1>
+        Book Your Appointment
+    </h1>
 
-                <div class="schedule-row">
+    <p>
+        Schedule your healthcare visit with
+        the Rural Health Unit of Arakan.
+    </p>
 
-                    <div class="schedule-icon">
+    <div class="patient-pill">
 
-                        <i
-                            class="fa-solid fa-calendar-day"
-                        ></i>
+        <i class="bi bi-person-circle"></i>
 
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            Monday - Friday
-                        </strong>
-
-                        <span>
-                            Regular appointment days
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <div class="schedule-row">
-
-                    <div class="schedule-icon">
-
-                        <i
-                            class="fa-solid fa-sun"
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            8:00 AM - 4:30 PM
-                        </strong>
-
-                        <span>
-                            Healthcare service hours
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <div class="schedule-row">
-
-                    <div class="schedule-icon">
-
-                        <i
-                            class="fa-solid fa-envelope"
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            Email Notifications
-                        </strong>
-
-                        <span>
-                            Appointment status updates
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- BOOKING TIPS -->
-
-            <div class="side-card">
-
-                <h5>
-
-                    <i
-                        class="fa-solid fa-lightbulb me-2"
-                        style="color:#2563eb;"
-                    ></i>
-
-                    Booking Tips
-
-                </h5>
-
-
-                <div class="schedule-row">
-
-                    <div class="schedule-icon">
-
-                        <i
-                            class="fa-solid fa-1"
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            Choose your service
-                        </strong>
-
-                        <span>
-                            Select the healthcare service you need.
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <div class="schedule-row">
-
-                    <div class="schedule-icon">
-
-                        <i
-                            class="fa-solid fa-2"
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            Select your schedule
-                        </strong>
-
-                        <span>
-                            Choose an available date and time.
-                        </span>
-
-                    </div>
-
-                </div>
-
-
-                <div class="schedule-row">
-
-                    <div class="schedule-icon">
-
-                        <i
-                            class="fa-solid fa-3"
-                        ></i>
-
-                    </div>
-
-
-                    <div>
-
-                        <strong>
-                            Check your email
-                        </strong>
-
-                        <span>
-                            Watch for appointment notifications.
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- SECURITY -->
-
-            <div class="side-card">
-
-                <h5>
-
-                    <i
-                        class="fa-solid fa-shield-halved me-2"
-                        style="color:#2563eb;"
-                    ></i>
-
-                    Your Information
-
-                </h5>
-
-
-                <p
-                    style="
-                        color:#64748b;
-                        font-size:10px;
-                        line-height:1.7;
-                        margin:0;
-                    "
-                >
-
-                    Your personal and appointment information
-                    is handled securely by the CareSched system
-                    and is used for healthcare appointment
-                    management.
-
-                </p>
-
-            </div>
-
-
-        </div>
-
+        <?= htmlspecialchars(
+            $patient['full_name']
+        ) ?>
 
     </div>
 
 </div>
 
-</main>
+
+<!-- ======================================================
+     MAIN CARD
+====================================================== -->
+
+<div class="main-card">
+
+<div class="row g-0">
 
 
-<!-- Bootstrap JS -->
+<!-- FORM -->
 
-<script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-></script>
+<div class="col-lg-7">
+
+<div class="form-section">
 
 
-<!-- =========================================================
-     FORM JAVASCRIPT
-========================================================= -->
+<div class="section-title">
+    Appointment Details
+</div>
+
+
+<div class="section-description">
+
+    Please select your preferred service,
+    date and available time.
+
+</div>
+
+
+<!-- SUCCESS -->
+
+<?php if ($success): ?>
+
+<div class="custom-alert success-alert">
+
+    <i class="bi bi-check-circle-fill me-2"></i>
+
+    <?= htmlspecialchars($success) ?>
+
+</div>
+
+<?php endif; ?>
+
+
+<!-- ERROR -->
+
+<?php if ($error): ?>
+
+<div class="custom-alert error-alert">
+
+    <i class="bi bi-exclamation-circle-fill me-2"></i>
+
+    <?= htmlspecialchars($error) ?>
+
+</div>
+
+<?php endif; ?>
+
+
+<form
+    method="POST"
+    id="appointmentForm"
+>
+
+
+<!-- SERVICE -->
+
+<div class="mb-4">
+
+<label
+    for="service_id"
+    class="form-label"
+>
+    Healthcare Service
+</label>
+
+
+<div class="input-wrapper">
+
+<i class="bi bi-heart-pulse input-icon"></i>
+
+
+<select
+    name="service_id"
+    id="service_id"
+    class="form-select"
+    required
+>
+
+<option value="">
+    Select a healthcare service
+</option>
+
+
+<?php foreach ($services as $service): ?>
+
+<option
+    value="<?= (int)$service['id'] ?>"
+    data-description="<?= htmlspecialchars(
+        $service['description'] ?? ''
+    ) ?>"
+    data-duration="<?= (int)$service['duration'] ?>"
+>
+
+<?= htmlspecialchars(
+    $service['service_name']
+) ?>
+
+— <?= (int)$service['duration'] ?> minutes
+
+</option>
+
+<?php endforeach; ?>
+
+</select>
+
+</div>
+
+
+<div
+    class="service-info"
+    id="serviceInfo"
+>
+
+<div
+    class="service-info-title"
+    id="serviceInfoTitle"
+></div>
+
+<p
+    class="service-info-text"
+    id="serviceInfoText"
+></p>
+
+</div>
+
+</div>
+
+
+<!-- DATE -->
+
+<div class="mb-4">
+
+<label
+    for="appointment_date"
+    class="form-label"
+>
+    Appointment Date
+</label>
+
+
+<div class="input-wrapper">
+
+<i class="bi bi-calendar-event input-icon"></i>
+
+
+<input
+    type="date"
+    name="appointment_date"
+    id="appointment_date"
+    class="form-control"
+    min="<?= date('Y-m-d') ?>"
+    value="<?= htmlspecialchars(
+        $_POST['appointment_date'] ?? ''
+    ) ?>"
+    required
+>
+
+</div>
+
+</div>
+
+
+<!-- TIME -->
+
+<div class="mb-4">
+
+<label
+    for="appointment_time"
+    class="form-label"
+>
+    Preferred Time
+</label>
+
+
+<div class="input-wrapper">
+
+<i class="bi bi-clock input-icon"></i>
+
+
+<select
+    name="appointment_time"
+    id="appointment_time"
+    class="form-select"
+    required
+>
+
+<option value="">
+    Select appointment time
+</option>
+
+
+<?php
+
+$start =
+    strtotime('08:00');
+
+$end =
+    strtotime('16:30');
+
+for (
+    $time = $start;
+    $time <= $end;
+    $time += 30 * 60
+):
+
+    $timeValue =
+        date('H:i', $time);
+
+    $timeDisplay =
+        date('h:i A', $time);
+
+    $selected =
+        (
+            ($_POST['appointment_time'] ?? '')
+            ===
+            $timeValue
+        )
+        ? 'selected'
+        : '';
+
+?>
+
+<option
+    value="<?= $timeValue ?>"
+    <?= $selected ?>
+>
+
+<?= $timeDisplay ?>
+
+</option>
+
+<?php endfor; ?>
+
+</select>
+
+</div>
+
+
+<div class="form-text mt-2">
+
+<i class="bi bi-info-circle"></i>
+
+Appointment hours:
+8:00 AM – 4:30 PM
+
+</div>
+
+
+<div
+    class="form-text mt-1"
+    id="slotStatus"
+></div>
+
+</div>
+
+
+<!-- SUBMIT -->
+
+<button
+    type="submit"
+    class="submit-btn"
+    id="submitBtn"
+>
+
+<i class="bi bi-calendar-check me-2"></i>
+
+Submit Appointment
+
+</button>
+
+
+</form>
+
+
+</div>
+
+</div>
+
+
+<!-- INFORMATION -->
+
+<div class="col-lg-5">
+
+<div class="info-section">
+
+
+<div class="info-title">
+
+<i class="bi bi-shield-check text-primary me-2"></i>
+
+Before You Book
+
+</div>
+
+
+<div class="info-item">
+
+<div class="info-icon">
+
+<i class="bi bi-calendar-check"></i>
+
+</div>
+
+<div>
+
+<h6>
+Choose Your Schedule
+</h6>
+
+<p>
+Select your preferred appointment date and time.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="info-item">
+
+<div class="info-icon">
+
+<i class="bi bi-hourglass-split"></i>
+
+</div>
+
+<div>
+
+<h6>
+Wait for Approval
+</h6>
+
+<p>
+Your appointment will remain pending until reviewed by RHU staff.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="info-item">
+
+<div class="info-icon">
+
+<i class="bi bi-envelope-check"></i>
+
+</div>
+
+<div>
+
+<h6>
+Email Notification
+</h6>
+
+<p>
+The administrator will receive an email notification.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="info-item">
+
+<div class="info-icon">
+
+<i class="bi bi-shield-check"></i>
+
+</div>
+
+<div>
+
+<h6>
+Duplicate Protection
+</h6>
+
+<p>
+CareSched prevents duplicate bookings for the same patient, date and time.
+</p>
+
+</div>
+
+</div>
+
+
+<div class="email-box">
+
+<small>
+
+<i class="bi bi-envelope me-1"></i>
+
+Your registered email
+
+</small>
+
+
+<strong>
+
+<?= htmlspecialchars(
+    $patient['email']
+) ?>
+
+</strong>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+<div class="footer">
+
+© <?= date('Y') ?>
+
+CareSched · Rural Health Unit of Arakan
+
+</div>
+
+
+</div>
+
+</div>
+
 
 <script>
 
-document.addEventListener(
-    'DOMContentLoaded',
+
+// ======================================================
+// SERVICE INFORMATION
+// ======================================================
+
+const serviceSelect =
+    document.getElementById(
+        'service_id'
+    );
+
+const serviceInfo =
+    document.getElementById(
+        'serviceInfo'
+    );
+
+const serviceInfoTitle =
+    document.getElementById(
+        'serviceInfoTitle'
+    );
+
+const serviceInfoText =
+    document.getElementById(
+        'serviceInfoText'
+    );
+
+
+serviceSelect.addEventListener(
+    'change',
     function () {
 
-        const form =
-            document.querySelector(
-                'form'
+        if (!this.value) {
+
+            serviceInfo.classList.remove(
+                'show'
             );
 
-        const button =
-            document.querySelector(
-                '.submit-button'
-            );
+            return;
+        }
 
 
-        if (form && button) {
+        const selected =
+            this.options[
+                this.selectedIndex
+            ];
 
-            form.addEventListener(
-                'submit',
-                function () {
 
-                    button.disabled =
-                        true;
+        const description =
+            selected.dataset.description || '';
 
-                    button.innerHTML = `
-                        <span
-                            class="spinner-border spinner-border-sm me-2"
-                            role="status"
-                            aria-hidden="true"
-                        ></span>
 
-                        Submitting Appointment...
-                    `;
+        const duration =
+            selected.dataset.duration || '';
 
+
+        serviceInfoTitle.textContent =
+            selected.textContent.trim();
+
+
+        serviceInfoText.textContent =
+            description
+            + ' • Estimated duration: '
+            + duration
+            + ' minutes.';
+
+
+        serviceInfo.classList.add(
+            'show'
+        );
+
+    }
+);
+
+
+// ======================================================
+// SCHEDULE-BASED SLOT AVAILABILITY
+//
+// Only appointment times that fall inside an admin-
+// configured schedule AND still have open slots can be
+// selected. Everything else is disabled.
+// ======================================================
+
+const appointmentDateInput =
+    document.getElementById('appointment_date');
+
+const appointmentTimeSelect =
+    document.getElementById('appointment_time');
+
+const slotStatus =
+    document.getElementById('slotStatus');
+
+const timeOptions =
+    Array.from(appointmentTimeSelect.options).filter(
+        (opt) => opt.value !== ''
+    );
+
+const originalTimeLabels =
+    new Map(
+        timeOptions.map(
+            (opt) => [opt.value, opt.textContent.trim()]
+        )
+    );
+
+function lockTimeOptions(message) {
+
+    timeOptions.forEach((opt) => {
+        opt.disabled = true;
+        opt.textContent = originalTimeLabels.get(opt.value);
+    });
+
+    appointmentTimeSelect.value = '';
+
+    slotStatus.textContent = message || '';
+}
+
+function refreshAvailableSlots() {
+
+    const serviceId = serviceSelect.value;
+    const date = appointmentDateInput.value;
+
+    if (!serviceId || !date) {
+
+        lockTimeOptions(
+            'Select a service and date to see available appointment times.'
+        );
+
+        return;
+    }
+
+    slotStatus.textContent = 'Checking available slots...';
+
+    fetch(
+        'ajax-schedule-slots.php?service_id='
+        + encodeURIComponent(serviceId)
+        + '&date='
+        + encodeURIComponent(date)
+    )
+        .then((response) => response.json())
+        .then((data) => {
+
+            const slots = data.slots || {};
+            let anyAvailable = false;
+
+            timeOptions.forEach((opt) => {
+
+                const isAvailable = slots[opt.value] === true;
+
+                opt.disabled = !isAvailable;
+
+                opt.textContent =
+                    originalTimeLabels.get(opt.value)
+                    + (isAvailable ? '' : ' (Unavailable)');
+
+                if (isAvailable) {
+                    anyAvailable = true;
                 }
+            });
+
+            if (
+                appointmentTimeSelect.value &&
+                slots[appointmentTimeSelect.value] !== true
+            ) {
+                appointmentTimeSelect.value = '';
+            }
+
+            slotStatus.textContent = anyAvailable
+                ? ''
+                : 'No available appointment slots for this service on the selected date. Please choose another date.';
+
+        })
+        .catch(() => {
+
+            lockTimeOptions(
+                'Unable to check slot availability right now. Please try again.'
             );
 
+        });
+}
+
+serviceSelect.addEventListener('change', refreshAvailableSlots);
+appointmentDateInput.addEventListener('change', refreshAvailableSlots);
+
+lockTimeOptions(
+    'Select a service and date to see available appointment times.'
+);
+
+
+// ======================================================
+// SUBMIT BUTTON
+// ======================================================
+
+const appointmentForm =
+    document.getElementById(
+        'appointmentForm'
+    );
+
+const submitBtn =
+    document.getElementById(
+        'submitBtn'
+    );
+
+
+appointmentForm.addEventListener(
+    'submit',
+    function (event) {
+
+        const selectedOption =
+            appointmentTimeSelect.options[
+                appointmentTimeSelect.selectedIndex
+            ];
+
+        if (
+            !selectedOption ||
+            !selectedOption.value ||
+            selectedOption.disabled
+        ) {
+
+            event.preventDefault();
+
+            slotStatus.textContent =
+                'Please select an available appointment time.';
+
+            return;
         }
 
+        submitBtn.disabled = true;
 
-        /* ---------------------------------------------
-           DATE VALIDATION
-        --------------------------------------------- */
-
-        const dateInput =
-            document.querySelector(
-                'input[name="appointment_date"]'
-            );
-
-
-        if (dateInput) {
-
-            const today =
-                new Date()
-                    .toISOString()
-                    .split('T')[0];
-
-            dateInput.min =
-                today;
-
-        }
-
-
-        /* ---------------------------------------------
-           TIME VALIDATION
-        --------------------------------------------- */
-
-        const timeInput =
-            document.querySelector(
-                'input[name="appointment_time"]'
-            );
-
-
-        if (timeInput) {
-
-            timeInput.addEventListener(
-                'change',
-                function () {
-
-                    if (
-                        this.value <
-                        '08:00' ||
-                        this.value >
-                        '16:30'
-                    ) {
-
-                        alert(
-                            'Please select a time between 8:00 AM and 4:30 PM.'
-                        );
-
-                        this.value = '';
-
-                    }
-
-                }
-            );
-
-        }
+        submitBtn.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2"></span>' +
+            'Checking Appointment...';
 
     }
 );
@@ -2518,5 +2228,4 @@ document.addEventListener(
 
 
 </body>
-
 </html>

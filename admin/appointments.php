@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
@@ -10,134 +10,202 @@ use PHPMailer\PHPMailer\Exception;
 ensure_role('admin');
 
 
-/*
-|--------------------------------------------------------------------------
-| GMAIL / PHPMailer CONFIGURATION
-|--------------------------------------------------------------------------
-|
-| PALITAN ANG VALUES SA IBABA
-|
-*/
+// ======================================================
+// SMTP CONFIGURATION
+// ======================================================
 
-$smtpHost = 'smtp.gmail.com';
-$smtpUsername = 'YOUR_GMAIL@gmail.com';
-$smtpPassword = 'YOUR_16_DIGIT_APP_PASSWORD';
-$smtpPort = 587;
-
+const SMTP_HOST = 'smtp.gmail.com';
+const SMTP_PORT = 587;
+const SMTP_USERNAME = 'johnloydatonducan84@gmail.com';
 
 /*
 |--------------------------------------------------------------------------
-| SEND APPOINTMENT EMAIL
+| IMPORTANT
 |--------------------------------------------------------------------------
+| Use a NEW Gmail APP PASSWORD here.
+| Do NOT use your normal Gmail password.
+|
+| Example:
+| const SMTP_PASSWORD = 'xxxx xxxx xxxx xxxx';
+|
 */
+const SMTP_PASSWORD = 'fkmt qqeb tlaa gsdf';
 
-function sendAppointmentEmail(
-    $patientEmail,
-    $patientName,
-    $serviceName,
-    $appointmentDate,
-    $appointmentTime,
-    $status
-) {
-    global $smtpHost;
-    global $smtpUsername;
-    global $smtpPassword;
-    global $smtpPort;
+const SMTP_FROM_NAME = 'CareSched - RHU Arakan';
+
+
+// ======================================================
+// SEND APPOINTMENT EMAIL
+// ======================================================
+
+function sendAppointmentNotification(
+    string $patientEmail,
+    string $patientName,
+    string $serviceName,
+    string $appointmentDate,
+    string $appointmentTime,
+    string $status,
+    string $rejectionReason = ''
+): array {
 
     $mail = new PHPMailer(true);
 
     try {
 
+        // SMTP
         $mail->isSMTP();
-
-        $mail->Host = $smtpHost;
+        $mail->Host = SMTP_HOST;
         $mail->SMTPAuth = true;
-        $mail->Username = $smtpUsername;
-        $mail->Password = $smtpPassword;
-
+        $mail->Username = SMTP_USERNAME;
+        $mail->Password = SMTP_PASSWORD;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $smtpPort;
+        $mail->Port = SMTP_PORT;
 
+        // Charset
         $mail->CharSet = 'UTF-8';
 
+        // Sender
         $mail->setFrom(
-            $smtpUsername,
-            'CareSched - RHU Arakan'
+            SMTP_USERNAME,
+            SMTP_FROM_NAME
         );
 
+        // Recipient
         $mail->addAddress(
             $patientEmail,
             $patientName
         );
 
-        $mail->isHTML(true);
+        // ==================================================
+        // SUBJECT
+        // ==================================================
 
+        switch ($status) {
 
-        if ($status === 'Approved') {
+            case 'Approved':
+                $subject = 'CareSched Appointment Approved';
+                break;
 
-            $subject = 'CareSched Appointment Approved';
+            case 'Rejected':
+                $subject = 'CareSched Appointment Rejected';
+                break;
 
-            $statusColor = '#198754';
+            case 'Completed':
+                $subject = 'CareSched Appointment Completed';
+                break;
 
-            $statusMessage = '
-                <p>
-                    Good news! Your appointment request has been
-                    <strong>approved</strong> by the Rural Health Unit of Arakan.
-                </p>
-            ';
+            case 'Cancelled':
+                $subject = 'CareSched Appointment Cancelled';
+                break;
 
-        } elseif ($status === 'Rejected') {
+            case 'Pending':
+                $subject = 'CareSched Appointment Status Updated';
+                break;
 
-            $subject = 'CareSched Appointment Rejected';
-
-            $statusColor = '#dc3545';
-
-            $statusMessage = '
-                <p>
-                    We regret to inform you that your appointment request
-                    has been <strong>rejected</strong>.
-                </p>
-
-                <p>
-                    If you need further assistance, please contact the
-                    Rural Health Unit of Arakan.
-                </p>
-            ';
-
-        } else {
-
-            $subject = 'CareSched Appointment Update';
-
-            $statusColor = '#0d6efd';
-
-            $statusMessage = '
-                <p>
-                    Your CareSched appointment status has been updated.
-                </p>
-            ';
+            default:
+                $subject = 'CareSched Appointment Update';
         }
 
 
-        $safeName = htmlspecialchars(
+        // ==================================================
+        // FORMAT DATE
+        // ==================================================
+
+        $formattedDate = date(
+            'F d, Y',
+            strtotime($appointmentDate)
+        );
+
+
+        // ==================================================
+        // FORMAT TIME
+        // ==================================================
+
+        $formattedTime = date(
+            'h:i A',
+            strtotime($appointmentTime)
+        );
+
+
+        // ==================================================
+        // STATUS MESSAGE
+        // ==================================================
+
+        $statusColor = '#2563eb';
+        $statusMessage = '';
+
+
+        switch ($status) {
+
+            case 'Approved':
+
+                $statusColor = '#16a34a';
+
+                $statusMessage =
+                    'Good news! Your appointment has been approved by the Rural Health Unit.';
+
+                break;
+
+
+            case 'Rejected':
+
+                $statusColor = '#dc2626';
+
+                $statusMessage =
+                    'We are sorry, but your appointment request has been rejected by the Rural Health Unit.';
+
+                break;
+
+
+            case 'Completed':
+
+                $statusColor = '#0284c7';
+
+                $statusMessage =
+                    'Your CareSched appointment has been marked as completed. Thank you for using our service.';
+
+                break;
+
+
+            case 'Cancelled':
+
+                $statusColor = '#64748b';
+
+                $statusMessage =
+                    'Your CareSched appointment has been cancelled.';
+
+                break;
+
+
+            case 'Pending':
+
+                $statusColor = '#d97706';
+
+                $statusMessage =
+                    'Your appointment status is currently pending. Please wait for further confirmation from the Rural Health Unit.';
+
+                break;
+
+
+            default:
+
+                $statusMessage =
+                    'Your appointment status has been updated.';
+        }
+
+
+        // ==================================================
+        // SAFE VALUES
+        // ==================================================
+
+        $safePatientName = htmlspecialchars(
             $patientName,
             ENT_QUOTES,
             'UTF-8'
         );
 
-        $safeService = htmlspecialchars(
+        $safeServiceName = htmlspecialchars(
             $serviceName,
-            ENT_QUOTES,
-            'UTF-8'
-        );
-
-        $safeDate = htmlspecialchars(
-            $appointmentDate,
-            ENT_QUOTES,
-            'UTF-8'
-        );
-
-        $safeTime = htmlspecialchars(
-            $appointmentTime,
             ENT_QUOTES,
             'UTF-8'
         );
@@ -148,11 +216,86 @@ function sendAppointmentEmail(
             'UTF-8'
         );
 
+        $safeDate = htmlspecialchars(
+            $formattedDate,
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
+        $safeTime = htmlspecialchars(
+            $formattedTime,
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
+        $safeMessage = htmlspecialchars(
+            $statusMessage,
+            ENT_QUOTES,
+            'UTF-8'
+        );
+
+
+        // ==================================================
+        // REJECTION REASON
+        // ==================================================
+
+        $rejectionHtml = '';
+
+        if (
+            $status === 'Rejected'
+            &&
+            $rejectionReason !== ''
+        ) {
+
+            $safeReason = htmlspecialchars(
+                $rejectionReason,
+                ENT_QUOTES,
+                'UTF-8'
+            );
+
+            $rejectionHtml = '
+
+                <div style="
+                    margin-top:20px;
+                    padding:15px;
+                    border-radius:10px;
+                    background:#fef2f2;
+                    border:1px solid #fecaca;
+                ">
+
+                    <div style="
+                        font-size:13px;
+                        font-weight:700;
+                        color:#991b1b;
+                        margin-bottom:6px;
+                    ">
+                        Reason for Rejection
+                    </div>
+
+                    <div style="
+                        font-size:13px;
+                        color:#7f1d1d;
+                        line-height:1.6;
+                    ">
+                        ' . $safeReason . '
+                    </div>
+
+                </div>
+
+            ';
+        }
+
+
+        // ==================================================
+        // HTML EMAIL
+        // ==================================================
+
+        $mail->isHTML(true);
 
         $mail->Subject = $subject;
 
-
         $mail->Body = '
+
 <!DOCTYPE html>
 
 <html>
@@ -161,9 +304,7 @@ function sendAppointmentEmail(
 
 <meta charset="UTF-8">
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>CareSched Appointment</title>
+<title>CareSched Appointment Notification</title>
 
 </head>
 
@@ -171,7 +312,7 @@ function sendAppointmentEmail(
 <body style="
     margin:0;
     padding:0;
-    background:#f4f7fb;
+    background:#f4f8fc;
     font-family:Arial,Helvetica,sans-serif;
 ">
 
@@ -180,11 +321,7 @@ function sendAppointmentEmail(
     width="100%"
     cellpadding="0"
     cellspacing="0"
-    style="
-        width:100%;
-        background:#f4f7fb;
-        padding:35px 15px;
-    "
+    style="padding:35px 15px;"
 >
 
 <tr>
@@ -193,16 +330,15 @@ function sendAppointmentEmail(
 
 
 <table
-    width="600"
+    width="100%"
     cellpadding="0"
     cellspacing="0"
     style="
-        max-width:600px;
-        width:100%;
+        max-width:620px;
         background:#ffffff;
         border-radius:18px;
         overflow:hidden;
-        border:1px solid #e5e7eb;
+        box-shadow:0 10px 35px rgba(15,23,42,.10);
     "
 >
 
@@ -211,32 +347,30 @@ function sendAppointmentEmail(
 
 <tr>
 
-<td
-    style="
-        background:#0d6efd;
-        padding:30px;
-        text-align:center;
-        color:#ffffff;
-    "
->
+<td style="
+    padding:28px;
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #1d4ed8,
+        #0ea5e9
+    );
+    color:#ffffff;
+">
 
-<div
-    style="
-        font-size:28px;
-        font-weight:800;
-    "
->
-    CareSched
+<div style="
+    font-size:24px;
+    font-weight:800;
+">
+    ❤️ CareSched
 </div>
 
-<div
-    style="
-        margin-top:7px;
-        font-size:13px;
-        opacity:.9;
-    "
->
-    RHU Arakan Appointment Scheduling System
+<div style="
+    margin-top:5px;
+    font-size:12px;
+    color:rgba(255,255,255,.8);
+">
+    Rural Health Unit Appointment System
 </div>
 
 </td>
@@ -248,113 +382,104 @@ function sendAppointmentEmail(
 
 <tr>
 
-<td
-    style="
-        padding:35px;
-    "
->
+<td style="padding:35px 32px;">
 
-<h2
-    style="
-        margin:0 0 18px;
-        color:#172033;
-        font-size:23px;
-    "
->
-    Appointment ' . $safeStatus . '
-</h2>
+<div style="
+    font-size:14px;
+    color:#64748b;
+    margin-bottom:7px;
+">
+    Hello,
+</div>
 
 
-<p
-    style="
-        color:#4b5563;
-        font-size:14px;
-        line-height:1.7;
-    "
->
-    Hello <strong>' . $safeName . '</strong>,
-</p>
+<div style="
+    font-size:22px;
+    font-weight:700;
+    color:#172033;
+    margin-bottom:15px;
+">
+    ' . $safePatientName . '
+</div>
 
 
-<div
-    style="
-        color:#4b5563;
-        font-size:14px;
-        line-height:1.7;
-    "
->
-    ' . $statusMessage . '
+<div style="
+    padding:14px 16px;
+    border-radius:10px;
+    background:#f8fafc;
+    border-left:4px solid ' . $statusColor . ';
+    color:#475569;
+    font-size:13px;
+    line-height:1.6;
+">
+    ' . $safeMessage . '
 </div>
 
 
 <!-- STATUS -->
 
-<div
-    style="
-        margin:25px 0;
-        padding:18px;
-        background:#f8fafc;
-        border-radius:12px;
-        text-align:center;
-    "
->
+<div style="
+    text-align:center;
+    margin:25px 0;
+">
 
-<div
-    style="
-        color:#64748b;
-        font-size:12px;
-    "
->
-    Appointment Status
-</div>
-
-
-<div
-    style="
-        margin-top:7px;
-        color:' . $statusColor . ';
-        font-size:22px;
-        font-weight:800;
-    "
->
+<span style="
+    display:inline-block;
+    padding:9px 18px;
+    border-radius:50px;
+    background:' . $statusColor . ';
+    color:#ffffff;
+    font-size:13px;
+    font-weight:700;
+">
     ' . $safeStatus . '
-</div>
+</span>
 
 </div>
 
 
 <!-- APPOINTMENT DETAILS -->
 
+<div style="
+    font-size:14px;
+    font-weight:700;
+    color:#172033;
+    margin-bottom:12px;
+">
+    Appointment Details
+</div>
+
+
 <table
     width="100%"
-    cellpadding="10"
+    cellpadding="0"
     cellspacing="0"
     style="
-        border-collapse:collapse;
-        font-size:14px;
+        border:1px solid #e2e8f0;
+        border-radius:10px;
+        overflow:hidden;
     "
 >
 
 <tr>
 
-<td
-    style="
-        border-bottom:1px solid #e5e7eb;
-        color:#64748b;
-    "
->
+<td style="
+    padding:12px;
+    width:38%;
+    color:#64748b;
+    font-size:12px;
+    background:#f8fafc;
+">
     Service
 </td>
 
-<td
-    align="right"
-    style="
-        border-bottom:1px solid #e5e7eb;
-        color:#172033;
-        font-weight:bold;
-    "
->
-    ' . $safeService . '
+<td style="
+    padding:12px;
+    color:#1e293b;
+    font-size:13px;
+    font-weight:600;
+">
+    ' . $safeServiceName . '
 </td>
 
 </tr>
@@ -362,23 +487,21 @@ function sendAppointmentEmail(
 
 <tr>
 
-<td
-    style="
-        border-bottom:1px solid #e5e7eb;
-        color:#64748b;
-    "
->
+<td style="
+    padding:12px;
+    color:#64748b;
+    font-size:12px;
+    background:#f8fafc;
+">
     Date
 </td>
 
-<td
-    align="right"
-    style="
-        border-bottom:1px solid #e5e7eb;
-        color:#172033;
-        font-weight:bold;
-    "
->
+<td style="
+    padding:12px;
+    color:#1e293b;
+    font-size:13px;
+    font-weight:600;
+">
     ' . $safeDate . '
 </td>
 
@@ -387,22 +510,45 @@ function sendAppointmentEmail(
 
 <tr>
 
-<td
-    style="
-        color:#64748b;
-    "
->
+<td style="
+    padding:12px;
+    color:#64748b;
+    font-size:12px;
+    background:#f8fafc;
+">
     Time
 </td>
 
-<td
-    align="right"
-    style="
-        color:#172033;
-        font-weight:bold;
-    "
->
+<td style="
+    padding:12px;
+    color:#1e293b;
+    font-size:13px;
+    font-weight:600;
+">
     ' . $safeTime . '
+</td>
+
+</tr>
+
+
+<tr>
+
+<td style="
+    padding:12px;
+    color:#64748b;
+    font-size:12px;
+    background:#f8fafc;
+">
+    Status
+</td>
+
+<td style="
+    padding:12px;
+    color:' . $statusColor . ';
+    font-size:13px;
+    font-weight:700;
+">
+    ' . $safeStatus . '
 </td>
 
 </tr>
@@ -410,18 +556,22 @@ function sendAppointmentEmail(
 </table>
 
 
-<p
-    style="
-        margin-top:28px;
-        color:#64748b;
-        font-size:13px;
-        line-height:1.7;
-    "
->
-    Please keep this email as your appointment reference.
-    For questions or concerns, please contact the
-    Rural Health Unit of Arakan.
-</p>
+' . $rejectionHtml . '
+
+
+<div style="
+    margin-top:25px;
+    font-size:12px;
+    color:#64748b;
+    line-height:1.7;
+">
+
+    Please keep this email for your appointment reference.
+
+    If you have questions regarding your appointment,
+    please contact the Rural Health Unit.
+
+</div>
 
 
 </td>
@@ -433,19 +583,27 @@ function sendAppointmentEmail(
 
 <tr>
 
-<td
-    style="
-        background:#f8fafc;
-        padding:20px;
-        text-align:center;
-        color:#94a3b8;
-        font-size:12px;
-    "
->
+<td style="
+    padding:20px 32px;
+    background:#f8fafc;
+    border-top:1px solid #e2e8f0;
+    text-align:center;
+">
 
-This is an automated message from CareSched.<br>
+<div style="
+    font-size:11px;
+    color:#94a3b8;
+">
+    This is an automated notification from CareSched.
+</div>
 
-Rural Health Unit - Arakan
+<div style="
+    margin-top:5px;
+    font-size:11px;
+    color:#94a3b8;
+">
+    Rural Health Unit of Arakan, Cotabato
+</div>
 
 </td>
 
@@ -459,6 +617,7 @@ Rural Health Unit - Arakan
 </tr>
 
 </table>
+
 
 </body>
 
@@ -466,107 +625,188 @@ Rural Health Unit - Arakan
 ';
 
 
-        $mail->AltBody =
-            "Hello {$patientName},\n\n" .
-            "Your CareSched appointment status is: {$status}\n\n" .
-            "Service: {$serviceName}\n" .
-            "Date: {$appointmentDate}\n" .
-            "Time: {$appointmentTime}\n\n" .
-            "Rural Health Unit - Arakan";
+        // ==================================================
+        // PLAIN TEXT EMAIL
+        // ==================================================
+
+        $plainText =
+            "CareSched Appointment Notification\n\n"
+            . "Hello " . $patientName . ",\n\n"
+            . $statusMessage . "\n\n"
+            . "Appointment Details\n"
+            . "-------------------\n"
+            . "Service: " . $serviceName . "\n"
+            . "Date: " . $formattedDate . "\n"
+            . "Time: " . $formattedTime . "\n"
+            . "Status: " . $status . "\n";
 
 
+        if (
+            $status === 'Rejected'
+            &&
+            $rejectionReason !== ''
+        ) {
+
+            $plainText .=
+                "\nReason for Rejection:\n"
+                . $rejectionReason
+                . "\n";
+        }
+
+
+        $plainText .=
+            "\nPlease keep this email for your appointment reference.\n\n"
+            . "CareSched\n"
+            . "Rural Health Unit of Arakan, Cotabato";
+
+
+        $mail->AltBody = $plainText;
+
+
+        // SEND
         $mail->send();
+
 
         return [
             'success' => true,
-            'message' => 'Email sent successfully.'
+            'message' => 'Email notification sent successfully.'
         ];
+
 
     } catch (Exception $e) {
 
         error_log(
-            'CareSched PHPMailer Error: ' .
-            $mail->ErrorInfo
+            'CareSched PHPMailer Error: '
+            . $mail->ErrorInfo
         );
 
         return [
             'success' => false,
-            'message' => $mail->ErrorInfo
+            'message' =>
+                'Appointment updated, but email notification could not be sent. '
+                . $mail->ErrorInfo
         ];
     }
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| HANDLE STATUS UPDATE
-| Approve / Reject / Complete / Cancel
-|--------------------------------------------------------------------------
-*/
+// ======================================================
+// FLASH MESSAGES
+// ======================================================
 
-if (
-    $_SERVER['REQUEST_METHOD'] === 'POST' &&
-    isset($_POST['action']) &&
-    $_POST['action'] === 'update_status'
-) {
+$success =
+    $_SESSION['appointment_success'] ?? '';
 
-    $id = (int) ($_POST['id'] ?? 0);
+$error =
+    $_SESSION['appointment_error'] ?? '';
 
-    $new_status =
-        trim($_POST['status'] ?? '');
+unset(
+    $_SESSION['appointment_success'],
+    $_SESSION['appointment_error']
+);
 
 
-    $allowed_statuses = [
+// ======================================================
+// STATUS UPDATE
+// ======================================================
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    $appointmentId =
+        $_POST['appointment_id'] ?? '';
+
+    $status =
+        $_POST['status'] ?? '';
+
+    $rejectionReason =
+        trim(
+            $_POST['rejection_reason'] ?? ''
+        );
+
+
+    $allowedStatuses = [
+        'Pending',
         'Approved',
         'Rejected',
         'Completed',
-        'Cancelled',
-        'Pending'
+        'Cancelled'
     ];
 
 
+    // ==================================================
+    // VALIDATION
+    // ==================================================
+
     if (
-        $id > 0 &&
-        in_array(
-            $new_status,
-            $allowed_statuses,
+        !ctype_digit(
+            (string)$appointmentId
+        )
+    ) {
+
+        $_SESSION['appointment_error'] =
+            'Invalid appointment ID.';
+
+        header('Location: appointments.php');
+        exit;
+
+    }
+
+
+    if (
+        !in_array(
+            $status,
+            $allowedStatuses,
             true
         )
     ) {
 
+        $_SESSION['appointment_error'] =
+            'Invalid appointment status.';
 
-        /*
-        |--------------------------------------------------------------------------
-        | GET APPOINTMENT INFORMATION
-        |--------------------------------------------------------------------------
-        |
-        | users.email is connected through:
-        |
-        | appointments.patient_id
-        |        ↓
-        | patients.id
-        |        ↓
-        | patients.user_id
-        |        ↓
-        | users.id
-        |        ↓
-        | users.email
-        |
-        */
+        header('Location: appointments.php');
+        exit;
 
-        $appointment_stmt = $pdo->prepare("
+    }
+
+
+    if (
+        $status === 'Rejected'
+        &&
+        $rejectionReason === ''
+    ) {
+
+        $_SESSION['appointment_error'] =
+            'Please provide a rejection reason.';
+
+        header('Location: appointments.php');
+        exit;
+    }
+
+
+    try {
+
+        // ==================================================
+        // GET APPOINTMENT
+        // ==================================================
+
+        $checkStmt = $pdo->prepare("
+
             SELECT
 
                 a.id,
                 a.patient_id,
+                a.service_id,
                 a.appointment_date,
                 a.appointment_time,
-                a.status AS current_status,
+                a.status,
+                a.rejection_reason,
 
                 p.first_name,
+                p.middle_name,
                 p.last_name,
 
                 u.email,
+                u.username,
 
                 s.service_name
 
@@ -581,582 +821,465 @@ if (
             INNER JOIN services s
                 ON a.service_id = s.id
 
-            WHERE a.id = :id
+            WHERE a.id = ?
 
             LIMIT 1
+
         ");
 
 
-        $appointment_stmt->execute([
-            'id' => $id
+        $checkStmt->execute([
+            $appointmentId
         ]);
 
 
         $appointment =
-            $appointment_stmt->fetch(
+            $checkStmt->fetch(
                 PDO::FETCH_ASSOC
             );
 
 
-        if ($appointment) {
+        if (!$appointment) {
+
+            throw new Exception(
+                'Appointment not found.'
+            );
+        }
 
 
-            $current_status =
-                $appointment['current_status'];
+        // ==================================================
+        // CURRENT STATUS
+        // ==================================================
+
+        $oldStatus =
+            $appointment['status'];
 
 
-            /*
-            |--------------------------------------------------------------------------
-            | UPDATE APPOINTMENT STATUS
-            |--------------------------------------------------------------------------
-            */
+        // ==================================================
+        // PREVENT DUPLICATE EMAIL
+        // ==================================================
 
-            $update = $pdo->prepare("
-                UPDATE appointments
+        if ($oldStatus === $status) {
 
-                SET
-                    status = :status
+            $_SESSION['appointment_success'] =
+                'Appointment status is already '
+                . $status
+                . '. No email notification was sent.';
 
-                WHERE id = :id
-            ");
+            header('Location: appointments.php');
+            exit;
+        }
 
 
-            $update->execute([
-                'status' => $new_status,
-                'id' => $id
+        // ==================================================
+        // CHECK PATIENT EMAIL
+        // ==================================================
+
+        $patientEmail =
+            trim(
+                $appointment['email'] ?? ''
+            );
+
+
+        if (
+            !filter_var(
+                $patientEmail,
+                FILTER_VALIDATE_EMAIL
+            )
+        ) {
+
+            throw new Exception(
+                'The patient does not have a valid email address.'
+            );
+        }
+
+
+        // ==================================================
+        // PATIENT NAME
+        // ==================================================
+
+        $patientName =
+            trim(
+
+                $appointment['first_name']
+                . ' '
+
+                . (
+                    !empty(
+                        $appointment['middle_name']
+                    )
+                    ?
+                    $appointment['middle_name']
+                    . ' '
+                    :
+                    ''
+                )
+
+                . $appointment['last_name']
+            );
+
+
+        // ==================================================
+        // UPDATE DATABASE
+        // ==================================================
+
+        if ($status === 'Rejected') {
+
+            $updateStmt =
+                $pdo->prepare("
+
+                    UPDATE appointments
+
+                    SET
+
+                        status = :status,
+
+                        rejection_reason =
+                            :rejection_reason,
+
+                        updated_at =
+                            NOW()
+
+                    WHERE id = :id
+
+                ");
+
+
+            $updateStmt->execute([
+
+                ':status' =>
+                    $status,
+
+                ':rejection_reason' =>
+                    $rejectionReason,
+
+                ':id' =>
+                    $appointmentId
+
             ]);
 
+        } else {
 
-            /*
-            |--------------------------------------------------------------------------
-            | SEND EMAIL ONLY WHEN STATUS ACTUALLY CHANGES
-            |--------------------------------------------------------------------------
-            */
+            $updateStmt =
+                $pdo->prepare("
 
-            if (
-                $current_status !== $new_status &&
-                in_array(
-                    $new_status,
-                    [
-                        'Approved',
-                        'Rejected'
-                    ],
-                    true
-                )
-            ) {
+                    UPDATE appointments
 
+                    SET
 
-                $patientName =
-                    trim(
-                        $appointment['first_name']
-                        . ' '
-                        . $appointment['last_name']
-                    );
+                        status = :status,
+
+                        rejection_reason =
+                            NULL,
+
+                        updated_at =
+                            NOW()
+
+                    WHERE id = :id
+
+                ");
 
 
-                $patientEmail =
-                    trim($appointment['email']);
+            $updateStmt->execute([
 
+                ':status' =>
+                    $status,
 
-                $serviceName =
-                    $appointment['service_name'];
+                ':id' =>
+                    $appointmentId
 
-
-                $formattedDate =
-                    date(
-                        'F d, Y',
-                        strtotime(
-                            $appointment[
-                                'appointment_date'
-                            ]
-                        )
-                    );
-
-
-                $formattedTime =
-                    date(
-                        'h:i A',
-                        strtotime(
-                            $appointment[
-                                'appointment_time'
-                            ]
-                        )
-                    );
-
-
-                /*
-                |--------------------------------------------------------------------------
-                | SEND EMAIL
-                |--------------------------------------------------------------------------
-                */
-
-                if (
-                    filter_var(
-                        $patientEmail,
-                        FILTER_VALIDATE_EMAIL
-                    )
-                ) {
-
-
-                    $emailResult =
-                        sendAppointmentEmail(
-                            $patientEmail,
-                            $patientName,
-                            $serviceName,
-                            $formattedDate,
-                            $formattedTime,
-                            $new_status
-                        );
-
-
-                    /*
-                    |--------------------------------------------------------------------------
-                    | SAVE NOTIFICATION
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $notificationStatus =
-                        $emailResult['success']
-                        ? 'Sent'
-                        : 'Failed';
-
-
-                    $notificationSubject =
-                        $new_status === 'Approved'
-                        ? 'CareSched Appointment Approved'
-                        : 'CareSched Appointment Rejected';
-
-
-                    $notificationMessage =
-                        "Appointment status: {$new_status}\n" .
-                        "Service: {$serviceName}\n" .
-                        "Date: {$formattedDate}\n" .
-                        "Time: {$formattedTime}";
-
-
-                    $notificationInsert =
-                        $pdo->prepare("
-                            INSERT INTO notifications (
-
-                                appointment_id,
-                                patient_id,
-                                email,
-                                notification_type,
-                                subject,
-                                message,
-                                status,
-                                sent_at
-
-                            )
-
-                            VALUES (
-
-                                :appointment_id,
-                                :patient_id,
-                                :email,
-                                :notification_type,
-                                :subject,
-                                :message,
-                                :status,
-                                :sent_at
-
-                            )
-                        ");
-
-
-                    $notificationInsert->execute([
-
-                        'appointment_id' =>
-                            $appointment['id'],
-
-                        'patient_id' =>
-                            $appointment['patient_id'],
-
-                        'email' =>
-                            $patientEmail,
-
-                        'notification_type' =>
-                            'Appointment',
-
-                        'subject' =>
-                            $notificationSubject,
-
-                        'message' =>
-                            $notificationMessage,
-
-                        'status' =>
-                            $notificationStatus,
-
-                        'sent_at' =>
-                            $emailResult['success']
-                            ? date('Y-m-d H:i:s')
-                            : null
-                    ]);
-                }
-            }
+            ]);
         }
-    }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | KEEP CURRENT FILTER AFTER UPDATE
-    |--------------------------------------------------------------------------
-    */
+        // ==================================================
+        // SEND EMAIL
+        // ==================================================
 
-    $redirectParams = [];
+        $emailResult =
+            sendAppointmentNotification(
 
+                $patientEmail,
 
-    if (isset($_GET['status'])) {
+                $patientName,
 
-        $redirectParams['status'] =
-            $_GET['status'];
-    }
+                $appointment['service_name'],
 
+                $appointment['appointment_date'],
 
-    if (isset($_GET['date'])) {
+                $appointment['appointment_time'],
 
-        $redirectParams['date'] =
-            $_GET['date'];
-    }
+                $status,
 
-
-    if (isset($_GET['q'])) {
-
-        $redirectParams['q'] =
-            $_GET['q'];
-    }
-
-
-    if (isset($_GET['page'])) {
-
-        $redirectParams['page'] =
-            $_GET['page'];
-    }
-
-
-    $redirectUrl =
-        'appointments.php';
-
-
-    if (!empty($redirectParams)) {
-
-        $redirectUrl .= '?' .
-            http_build_query(
-                $redirectParams
+                $rejectionReason
             );
+
+
+        // ==================================================
+        // SUCCESS MESSAGE
+        // ==================================================
+
+        if (
+            $emailResult['success']
+        ) {
+
+            $_SESSION['appointment_success'] =
+
+                'Appointment for '
+                . $patientName
+                . ' has been updated from '
+                . $oldStatus
+                . ' to '
+                . $status
+                . '. Email notification sent to '
+                . $patientEmail
+                . '.';
+
+        } else {
+
+            $_SESSION['appointment_success'] =
+
+                'Appointment for '
+                . $patientName
+                . ' has been updated from '
+                . $oldStatus
+                . ' to '
+                . $status
+                . '.';
+
+            $_SESSION['appointment_error'] =
+                $emailResult['message'];
+        }
+
+
+        // ==================================================
+        // POST REDIRECT GET
+        // ==================================================
+
+        header(
+            'Location: appointments.php'
+        );
+
+        exit;
+
+
+    } catch (PDOException $e) {
+
+        $_SESSION['appointment_error'] =
+            'Database error: '
+            . $e->getMessage();
+
+        header('Location: appointments.php');
+        exit;
+
+
+    } catch (Exception $e) {
+
+        $_SESSION['appointment_error'] =
+            $e->getMessage();
+
+        header('Location: appointments.php');
+        exit;
     }
-
-
-    header(
-        'Location: ' .
-        $redirectUrl
-    );
-
-    exit;
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| FILTERS
-|--------------------------------------------------------------------------
-*/
+// ======================================================
+// GET APPOINTMENTS
+// ======================================================
 
-$allowed_filters = [
-    'all',
-    'Pending',
-    'Approved',
-    'Rejected',
-    'Completed',
-    'Cancelled'
-];
+try {
 
+    $stmt = $pdo->query("
 
-$status_filter =
-    $_GET['status'] ?? 'all';
-
-
-if (
-    !in_array(
-        $status_filter,
-        $allowed_filters,
-        true
-    )
-) {
-
-    $status_filter = 'all';
-}
-
-
-$date_filter =
-    $_GET['date'] ?? '';
-
-
-$search =
-    trim(
-        $_GET['q'] ?? ''
-    );
-
-
-/*
-|--------------------------------------------------------------------------
-| PAGINATION
-|--------------------------------------------------------------------------
-*/
-
-$per_page = 10;
-
-
-$page =
-    max(
-        1,
-        (int) (
-            $_GET['page'] ?? 1
-        )
-    );
-
-
-$offset =
-    ($page - 1) *
-    $per_page;
-
-
-/*
-|--------------------------------------------------------------------------
-| BUILD QUERY
-|--------------------------------------------------------------------------
-*/
-
-$where = [];
-
-$params = [];
-
-
-if ($status_filter !== 'all') {
-
-    $where[] =
-        'a.status = :status';
-
-    $params['status'] =
-        $status_filter;
-}
-
-
-if ($date_filter === 'today') {
-
-    $where[] =
-        'a.appointment_date = CURDATE()';
-}
-
-
-if ($search !== '') {
-
-    $where[] =
-        "(
-            p.first_name LIKE :search
-            OR p.last_name LIKE :search
-        )";
-
-    $params['search'] =
-        '%' . $search . '%';
-}
-
-
-$where_sql =
-    $where
-    ? 'WHERE ' .
-      implode(
-          ' AND ',
-          $where
-      )
-    : '';
-
-
-/*
-|--------------------------------------------------------------------------
-| COUNT APPOINTMENTS
-|--------------------------------------------------------------------------
-*/
-
-$count_stmt = $pdo->prepare("
-    SELECT COUNT(*)
-
-    FROM appointments a
-
-    INNER JOIN patients p
-        ON a.patient_id = p.id
-
-    INNER JOIN services s
-        ON a.service_id = s.id
-
-    $where_sql
-");
-
-
-$count_stmt->execute(
-    $params
-);
-
-
-$total_rows =
-    (int) $count_stmt->fetchColumn();
-
-
-$total_pages =
-    max(
-        1,
-        (int) ceil(
-            $total_rows /
-            $per_page
-        )
-    );
-
-
-/*
-|--------------------------------------------------------------------------
-| GET APPOINTMENTS
-|--------------------------------------------------------------------------
-*/
-
-$list_stmt = $pdo->prepare("
-    SELECT
-
-        a.id,
-        a.appointment_date,
-        a.appointment_time,
-        a.status,
-        a.reason,
-
-        p.first_name,
-        p.last_name,
-
-        s.service_name
-
-    FROM appointments a
-
-    INNER JOIN patients p
-        ON a.patient_id = p.id
-
-    INNER JOIN services s
-        ON a.service_id = s.id
-
-    $where_sql
-
-    ORDER BY
-        a.appointment_date DESC,
-        a.appointment_time DESC
-
-    LIMIT $per_page
-    OFFSET $offset
-");
-
-
-$list_stmt->execute(
-    $params
-);
-
-
-$appointments =
-    $list_stmt->fetchAll(
-        PDO::FETCH_ASSOC
-    );
-
-
-/*
-|--------------------------------------------------------------------------
-| STATUS COUNTS
-|--------------------------------------------------------------------------
-*/
-
-$tab_counts = [
-
-    'all' => 0,
-
-    'Pending' => 0,
-
-    'Approved' => 0,
-
-    'Rejected' => 0,
-
-    'Completed' => 0,
-
-    'Cancelled' => 0
-
-];
-
-
-$counts_stmt =
-    $pdo->query("
         SELECT
-            status,
-            COUNT(*) AS total
 
-        FROM appointments
+            a.id AS appointment_id,
 
-        GROUP BY status
+            a.patient_id,
+
+            a.service_id,
+
+            a.appointment_date,
+
+            a.appointment_time,
+
+            a.reason,
+
+            a.notes,
+
+            a.status,
+
+            a.rejection_reason,
+
+            a.created_at,
+
+            a.updated_at,
+
+            p.first_name,
+
+            p.middle_name,
+
+            p.last_name,
+
+            p.contact_number,
+
+            p.address,
+
+            u.email,
+
+            u.username,
+
+            s.service_name,
+
+            s.description AS service_description,
+
+            s.duration,
+
+            s.max_patients
+
+        FROM appointments a
+
+        INNER JOIN patients p
+            ON a.patient_id = p.id
+
+        INNER JOIN users u
+            ON p.user_id = u.id
+
+        INNER JOIN services s
+            ON a.service_id = s.id
+
+        ORDER BY
+
+            a.appointment_date DESC,
+
+            a.appointment_time DESC,
+
+            a.id DESC
+
     ");
 
 
+    $appointments =
+        $stmt->fetchAll(
+            PDO::FETCH_ASSOC
+        );
+
+
+} catch (PDOException $e) {
+
+    die(
+
+        'Database error: '
+
+        . htmlspecialchars(
+            $e->getMessage()
+        )
+
+    );
+}
+
+
+// ======================================================
+// COUNTERS
+// ======================================================
+
+$totalAppointments =
+    count($appointments);
+
+$pendingCount = 0;
+$approvedCount = 0;
+$completedCount = 0;
+$rejectedCount = 0;
+$cancelledCount = 0;
+
+
 foreach (
-    $counts_stmt->fetchAll(
-        PDO::FETCH_ASSOC
-    ) as $row
+    $appointments
+    as $appointment
 ) {
 
-    $tab_counts['all'] +=
-        (int) $row['total'];
-
-
-    if (
-        isset(
-            $tab_counts[
-                $row['status']
-            ]
-        )
+    switch (
+        $appointment['status']
     ) {
 
-        $tab_counts[
-            $row['status']
-        ] =
-            (int) $row['total'];
+        case 'Pending':
+            $pendingCount++;
+            break;
+
+        case 'Approved':
+            $approvedCount++;
+            break;
+
+        case 'Completed':
+            $completedCount++;
+            break;
+
+        case 'Rejected':
+            $rejectedCount++;
+            break;
+
+        case 'Cancelled':
+            $cancelledCount++;
+            break;
     }
 }
 
 
-/*
-|--------------------------------------------------------------------------
-| STATUS CLASS
-|--------------------------------------------------------------------------
-*/
+// ======================================================
+// HELPER FUNCTIONS
+// ======================================================
+
+function patientFullName($appointment)
+{
+    return trim(
+
+        $appointment['first_name']
+
+        . ' '
+
+        . (
+
+            !empty(
+                $appointment['middle_name']
+            )
+
+            ?
+
+            $appointment['middle_name']
+            . ' '
+
+            :
+
+            ''
+        )
+
+        . $appointment['last_name']
+    );
+}
+
 
 function statusClass($status)
 {
-    switch (
-        strtolower($status)
-    ) {
+    switch ($status) {
 
-        case 'approved':
+        case 'Pending':
+            return 'pending';
 
-            return 'status-approved';
+        case 'Approved':
+            return 'approved';
 
-        case 'pending':
+        case 'Completed':
+            return 'completed';
 
-            return 'status-pending';
+        case 'Rejected':
+            return 'rejected';
 
-        case 'completed':
-
-            return 'status-completed';
-
-        case 'rejected':
-
-        case 'cancelled':
-
-            return 'status-rejected';
+        case 'Cancelled':
+            return 'cancelled';
 
         default:
-
-            return 'status-completed';
+            return 'pending';
     }
 }
 
@@ -1168,1011 +1291,553 @@ function statusClass($status)
 
 <head>
 
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <title>
-        Appointments | CareSched Admin
-    </title>
+<title>
+    Appointments | CareSched Admin
+</title>
 
 
-    <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-        rel="stylesheet"
-    >
+<!-- Bootstrap -->
 
-    <link
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        rel="stylesheet"
-    >
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+>
 
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
 
+<!-- Bootstrap Icons -->
 
-    <style>
+<link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+>
 
-        * {
-            box-sizing: border-box;
-        }
 
+<!-- Google Font -->
 
-        :root {
+<link
+    rel="preconnect"
+    href="https://fonts.googleapis.com"
+>
 
-            --primary: #0d6efd;
+<link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+>
 
-            --primary-dark: #0758c9;
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+>
 
-            --sidebar: #0b1f3a;
 
-            --sidebar-light: #14345c;
+<style>
 
-            --bg: #f4f7fb;
+* {
+    box-sizing: border-box;
+}
 
-            --text: #172033;
 
-            --muted: #7b8798;
+body {
 
-            --border: #e6ebf2;
+    margin: 0;
 
-            --white: #ffffff;
-        }
+    font-family: 'Inter', sans-serif;
 
+    background:
+        linear-gradient(
+            135deg,
+            #f8fafc,
+            #eef6ff
+        );
 
-        body {
+    color: #1e293b;
+}
 
-            margin: 0;
 
-            font-family:
-                'Inter',
-                sans-serif;
+/* =====================================================
+   MAIN
+===================================================== */
 
-            background:
-                var(--bg);
+.main {
 
-            color:
-                var(--text);
-        }
+    margin-left: 260px;
 
+    min-height: 100vh;
 
-        a {
-            text-decoration: none;
-        }
+    padding: 30px;
+}
 
 
-        .sidebar {
+.topbar {
 
-            position: fixed;
+    display: flex;
 
-            top: 0;
+    justify-content: space-between;
 
-            left: 0;
+    align-items: center;
 
-            width: 260px;
+    margin-bottom: 25px;
+}
 
-            height: 100vh;
 
-            background:
-                linear-gradient(
-                    180deg,
-                    #0b1f3a,
-                    #102d50
-                );
+.page-title {
 
-            color: white;
+    font-size: 27px;
 
-            padding:
-                25px 16px;
+    font-weight: 800;
 
-            z-index: 1000;
+    margin: 0;
+}
 
-            transition:
-                .3s ease;
 
-            overflow-y: auto;
-        }
+.page-subtitle {
 
+    color: #64748b;
 
-        .sidebar-brand {
+    font-size: 13px;
 
-            display: flex;
+    margin-top: 5px;
+}
 
-            align-items: center;
 
-            gap: 12px;
+.admin-badge {
 
-            padding:
-                10px 12px 28px;
+    padding: 10px 15px;
 
-            border-bottom:
-                1px solid
-                rgba(255,255,255,.08);
+    border-radius: 12px;
 
-            margin-bottom: 25px;
-        }
+    background: white;
 
+    border: 1px solid #e2e8f0;
 
-        .brand-icon {
+    font-size: 12px;
 
-            width: 43px;
+    font-weight: 700;
+}
 
-            height: 43px;
 
-            display: flex;
+/* =====================================================
+   ALERT
+===================================================== */
 
-            align-items: center;
+.alert-custom {
 
-            justify-content: center;
+    border: none;
 
-            border-radius: 13px;
+    border-radius: 14px;
 
-            background:
-                linear-gradient(
-                    135deg,
-                    #0d6efd,
-                    #198754
-                );
+    padding: 15px 18px;
 
-            font-size: 19px;
-        }
+    font-size: 13px;
 
+    margin-bottom: 20px;
+}
 
-        .brand-text strong {
 
-            display: block;
+/* =====================================================
+   STATS
+===================================================== */
 
-            font-size: 18px;
+.stats {
 
-            font-weight: 800;
-        }
+    display: grid;
 
+    grid-template-columns:
+        repeat(5, 1fr);
 
-        .brand-text span {
+    gap: 15px;
 
-            font-size: 10px;
+    margin-bottom: 25px;
+}
 
-            color:
-                rgba(255,255,255,.55);
 
-            text-transform:
-                uppercase;
+.stat-card {
 
-            letter-spacing:
-                .8px;
-        }
+    padding: 20px;
 
+    border-radius: 18px;
 
-        .menu-label {
+    background: white;
 
-            padding:
-                0 13px;
+    border: 1px solid #e2e8f0;
 
-            color:
-                rgba(255,255,255,.4);
+    box-shadow:
+        0 10px 30px
+        rgba(15,23,42,.05);
+}
 
-            font-size: 10px;
 
-            font-weight: 700;
+.stat-icon {
 
-            text-transform:
-                uppercase;
+    width: 38px;
 
-            letter-spacing:
-                1px;
+    height: 38px;
 
-            margin:
-                20px 0 8px;
-        }
+    display: flex;
 
+    align-items: center;
 
-        .sidebar-link {
+    justify-content: center;
 
-            display: flex;
+    border-radius: 10px;
 
-            align-items: center;
+    margin-bottom: 12px;
 
-            gap: 13px;
+    color: #0d6efd;
 
-            color:
-                rgba(255,255,255,.7);
+    background: #eff6ff;
+}
 
-            padding:
-                12px 14px;
 
-            border-radius: 11px;
+.stat-number {
 
-            margin-bottom: 4px;
+    font-size: 25px;
 
-            font-size: 13px;
+    font-weight: 800;
+}
 
-            font-weight: 500;
 
-            transition:
-                .2s ease;
-        }
+.stat-label {
 
+    color: #64748b;
 
-        .sidebar-link i {
+    font-size: 11px;
 
-            width: 20px;
+    font-weight: 600;
+}
 
-            text-align: center;
-        }
 
+/* =====================================================
+   APPOINTMENT CARD
+===================================================== */
 
-        .sidebar-link:hover,
-        .sidebar-link.active {
+.card-main {
 
-            color: white;
+    background: white;
 
-            background:
-                rgba(13,110,253,.25);
+    border-radius: 20px;
 
-            transform:
-                translateX(3px);
-        }
+    border: 1px solid #e2e8f0;
 
+    overflow: hidden;
 
-        .sidebar-link.active {
+    box-shadow:
+        0 15px 45px
+        rgba(15,23,42,.06);
+}
 
-            box-shadow:
-                inset 3px 0 0 #0d6efd;
-        }
 
+.card-header-custom {
 
-        .sidebar-bottom {
+    padding: 20px 22px;
 
-            position: absolute;
+    border-bottom: 1px solid #e2e8f0;
 
-            bottom: 20px;
+    display: flex;
 
-            left: 16px;
+    justify-content: space-between;
 
-            right: 16px;
-        }
+    align-items: center;
+}
 
 
-        .logout-link {
+.card-header-custom h5 {
 
-            color:
-                #ffb4b4;
-        }
+    margin: 0;
 
+    font-size: 16px;
 
-        .logout-link:hover {
+    font-weight: 800;
+}
 
-            color: #fff;
 
-            background:
-                rgba(220,53,69,.18);
-        }
+.table-responsive {
 
+    overflow-x: auto;
+}
 
-        .main {
 
-            margin-left: 260px;
+table {
 
-            min-height: 100vh;
+    min-width: 1050px;
+}
 
-            transition:
-                .3s ease;
-        }
 
+.table thead th {
 
-        .topbar {
+    padding: 14px 18px;
 
-            height: 76px;
+    color: #64748b;
 
-            background: white;
+    background: #f8fafc;
 
-            border-bottom:
-                1px solid var(--border);
+    font-size: 11px;
 
-            display: flex;
+    text-transform: uppercase;
 
-            align-items: center;
+    letter-spacing: .4px;
 
-            justify-content: space-between;
+    border-bottom: 1px solid #e2e8f0;
+}
 
-            padding:
-                0 35px;
 
-            position: sticky;
+.table tbody td {
 
-            top: 0;
+    padding: 16px 18px;
 
-            z-index: 500;
-        }
+    vertical-align: middle;
 
+    border-bottom: 1px solid #f1f5f9;
 
-        .menu-toggle {
+    font-size: 12px;
+}
 
-            display: none;
 
-            border: none;
+.table tbody tr:hover {
 
-            background:
-                #eef4ff;
+    background: #f8fbff;
+}
 
-            color:
-                var(--primary);
 
-            width: 42px;
+/* =====================================================
+   PATIENT
+===================================================== */
 
-            height: 42px;
+.patient-name {
 
-            border-radius: 10px;
-        }
+    font-weight: 700;
 
+    color: #1e293b;
+}
 
-        .page-title h1 {
 
-            margin: 0;
+.patient-email {
 
-            font-size: 20px;
+    color: #94a3b8;
 
-            font-weight: 800;
-        }
+    font-size: 10px;
 
+    margin-top: 3px;
+}
 
-        .page-title p {
 
-            margin:
-                4px 0 0;
+.service-name {
 
-            color:
-                var(--muted);
+    font-weight: 700;
 
-            font-size: 11px;
-        }
+    color: #334155;
+}
 
 
-        .admin-profile {
+.date-main {
 
-            display: flex;
+    font-weight: 700;
+}
 
-            align-items: center;
 
-            gap: 11px;
-        }
+.time-main {
 
+    color: #64748b;
 
-        .admin-avatar {
+    font-size: 11px;
+}
 
-            width: 40px;
 
-            height: 40px;
+/* =====================================================
+   STATUS
+===================================================== */
 
-            border-radius: 12px;
+.status {
 
-            background:
-                #eaf2ff;
+    display: inline-flex;
 
-            color:
-                var(--primary);
+    align-items: center;
 
-            display: flex;
+    gap: 5px;
 
-            align-items: center;
+    padding: 6px 10px;
 
-            justify-content: center;
+    border-radius: 50px;
 
-            font-size: 15px;
-        }
+    font-size: 10px;
 
+    font-weight: 700;
+}
 
-        .admin-profile strong {
 
-            display: block;
+.status.pending {
 
-            font-size: 12px;
-        }
+    color: #92400e;
 
+    background: #fef3c7;
+}
 
-        .admin-profile span {
 
-            display: block;
+.status.approved {
 
-            font-size: 10px;
+    color: #166534;
 
-            color:
-                var(--muted);
-        }
+    background: #dcfce7;
+}
 
 
-        .content {
+.status.completed {
 
-            padding:
-                30px 35px;
-        }
+    color: #075985;
 
+    background: #e0f2fe;
+}
 
-        .section-card {
 
-            background: white;
+.status.rejected {
 
-            border:
-                1px solid var(--border);
+    color: #991b1b;
 
-            border-radius: 18px;
+    background: #fee2e2;
+}
 
-            box-shadow:
-                0 5px 20px
-                rgba(20,40,70,.04);
 
-            overflow: hidden;
-        }
+.status.cancelled {
 
+    color: #475569;
 
-        .section-header {
+    background: #e2e8f0;
+}
 
-            padding:
-                20px 22px;
 
-            border-bottom:
-                1px solid var(--border);
+/* =====================================================
+   ACTION
+===================================================== */
 
-            display: flex;
+.action-form {
 
-            justify-content: space-between;
+    display: flex;
 
-            align-items: center;
+    gap: 5px;
 
-            flex-wrap: wrap;
+    align-items: center;
 
-            gap: 12px;
-        }
+    flex-wrap: wrap;
+}
 
 
-        .section-header h3 {
+.action-form select {
 
-            margin: 0;
+    min-width: 110px;
 
-            font-size: 15px;
+    border-radius: 8px;
 
-            font-weight: 800;
-        }
+    border: 1px solid #dbe4ee;
 
+    padding: 7px;
 
-        .section-header span {
+    font-size: 10px;
+}
 
-            color:
-                var(--muted);
 
-            font-size: 11px;
-        }
+.btn-update {
 
+    border: none;
 
-        .filter-bar {
+    border-radius: 8px;
 
-            padding:
-                16px 22px;
+    padding: 8px 10px;
 
-            border-bottom:
-                1px solid var(--border);
+    color: white;
 
-            display: flex;
+    background: #0d6efd;
 
-            flex-wrap: wrap;
+    font-size: 11px;
 
-            gap: 10px;
+    font-weight: 700;
+}
 
-            align-items: center;
 
-            justify-content: space-between;
-        }
+.btn-update:hover {
 
+    background: #0b5ed7;
+}
 
-        .filter-tabs {
 
-            display: flex;
+/* =====================================================
+   EMPTY
+===================================================== */
 
-            flex-wrap: wrap;
+.empty {
 
-            gap: 8px;
-        }
+    padding: 70px 20px;
 
+    text-align: center;
 
-        .filter-tab {
+    color: #94a3b8;
+}
 
-            display: inline-flex;
 
-            align-items: center;
+.empty i {
 
-            gap: 6px;
+    font-size: 45px;
 
-            padding:
-                8px 13px;
+    margin-bottom: 15px;
+}
 
-            border:
-                1px solid var(--border);
 
-            border-radius: 30px;
+/* =====================================================
+   RESPONSIVE
+===================================================== */
 
-            color:
-                #64748b;
+@media (max-width: 1100px) {
 
-            background: white;
+    .stats {
 
-            font-size: 10px;
+        grid-template-columns:
+            repeat(3, 1fr);
+    }
+}
 
-            font-weight: 700;
 
-            transition:
-                .2s ease;
-        }
+@media (max-width: 768px) {
 
+    .main {
 
-        .filter-tab:hover {
+        margin-left: 0;
 
-            color:
-                var(--primary);
+        padding: 20px 12px;
+    }
 
-            border-color:
-                #bcd4fa;
-        }
+    .stats {
 
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
 
-        .filter-tab.active {
+    .topbar {
 
-            color: white;
+        align-items: flex-start;
 
-            border-color:
-                transparent;
+        gap: 15px;
 
-            background:
-                linear-gradient(
-                    135deg,
-                    #0d6efd,
-                    #0ea5e9
-                );
-        }
+        flex-direction: column;
+    }
+}
 
 
-        .filter-tab .count {
+@media (max-width: 480px) {
 
-            padding:
-                1px 6px;
+    .stats {
 
-            border-radius: 20px;
+        grid-template-columns: 1fr;
+    }
+}
 
-            background:
-                rgba(0,0,0,.06);
-
-            font-size: 8px;
-        }
-
-
-        .filter-tab.active .count {
-
-            background:
-                rgba(255,255,255,.25);
-        }
-
-
-        .search-box {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 8px;
-        }
-
-
-        .search-box input {
-
-            padding:
-                9px 13px;
-
-            border:
-                1px solid var(--border);
-
-            border-radius: 10px;
-
-            font-size: 11px;
-
-            min-width: 200px;
-        }
-
-
-        .search-box button {
-
-            border: none;
-
-            background:
-                var(--primary);
-
-            color: white;
-
-            padding:
-                9px 13px;
-
-            border-radius: 10px;
-
-            font-size: 11px;
-        }
-
-
-        .appointment-table {
-
-            width: 100%;
-
-            border-collapse:
-                collapse;
-        }
-
-
-        .appointment-table th {
-
-            padding:
-                13px 22px;
-
-            color:
-                #8a96a8;
-
-            font-size: 10px;
-
-            text-transform:
-                uppercase;
-
-            letter-spacing:
-                .5px;
-
-            font-weight: 700;
-
-            background:
-                #fafbfd;
-
-            border-bottom:
-                1px solid var(--border);
-
-            text-align: left;
-        }
-
-
-        .appointment-table td {
-
-            padding:
-                14px 22px;
-
-            border-bottom:
-                1px solid #f0f2f5;
-
-            font-size: 11px;
-
-            vertical-align:
-                middle;
-        }
-
-
-        .patient-name {
-
-            font-weight: 700;
-        }
-
-
-        .service-name {
-
-            color:
-                var(--muted);
-        }
-
-
-        .status {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            padding:
-                5px 9px;
-
-            border-radius: 20px;
-
-            font-size: 9px;
-
-            font-weight: 700;
-        }
-
-
-        .status-pending {
-
-            background:
-                #fff4df;
-
-            color:
-                #b76b00;
-        }
-
-
-        .status-approved {
-
-            background:
-                #e9f8f0;
-
-            color:
-                #147346;
-        }
-
-
-        .status-rejected {
-
-            background:
-                #fff0f0;
-
-            color:
-                #b42318;
-        }
-
-
-        .status-completed {
-
-            background:
-                #eef1f5;
-
-            color:
-                #667085;
-        }
-
-
-        .action-btns {
-
-            display: flex;
-
-            gap: 6px;
-        }
-
-
-        .icon-btn {
-
-            width: 30px;
-
-            height: 30px;
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            border-radius: 8px;
-
-            font-size: 11px;
-
-            border: none;
-        }
-
-
-        .icon-btn.view {
-
-            background:
-                #eef4ff;
-
-            color:
-                var(--primary);
-        }
-
-
-        .icon-btn.view:hover {
-
-            background:
-                var(--primary);
-
-            color: white;
-        }
-
-
-        .icon-btn.approve {
-
-            background:
-                #e9f8f0;
-
-            color:
-                #147346;
-        }
-
-
-        .icon-btn.approve:hover {
-
-            background:
-                #147346;
-
-            color: white;
-        }
-
-
-        .icon-btn.reject {
-
-            background:
-                #fff0f0;
-
-            color:
-                #b42318;
-        }
-
-
-        .icon-btn.reject:hover {
-
-            background:
-                #b42318;
-
-            color: white;
-        }
-
-
-        .empty-state {
-
-            padding:
-                45px 20px;
-
-            text-align: center;
-
-            color:
-                var(--muted);
-        }
-
-
-        .empty-state i {
-
-            font-size: 30px;
-
-            margin-bottom: 12px;
-
-            opacity: .5;
-        }
-
-
-        .empty-state p {
-
-            margin: 0;
-
-            font-size: 12px;
-        }
-
-
-        .pagination-bar {
-
-            padding:
-                16px 22px;
-
-            display: flex;
-
-            justify-content: space-between;
-
-            align-items: center;
-
-            flex-wrap: wrap;
-
-            gap: 10px;
-        }
-
-
-        .pagination-bar span {
-
-            color:
-                var(--muted);
-
-            font-size: 10px;
-        }
-
-
-        .page-link {
-
-            display: inline-flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            width: 30px;
-
-            height: 30px;
-
-            border:
-                1px solid var(--border);
-
-            border-radius: 8px;
-
-            color:
-                var(--text);
-
-            font-size: 10px;
-
-            font-weight: 700;
-        }
-
-
-        .page-link.active {
-
-            background:
-                var(--primary);
-
-            border-color:
-                var(--primary);
-
-            color: white;
-        }
-
-
-        .page-link.disabled {
-
-            opacity: .4;
-
-            pointer-events: none;
-        }
-
-
-        @media (max-width: 850px) {
-
-            .sidebar {
-
-                transform:
-                    translateX(-100%);
-            }
-
-
-            .sidebar.show {
-
-                transform:
-                    translateX(0);
-            }
-
-
-            .main {
-
-                margin-left: 0;
-            }
-
-
-            .menu-toggle {
-
-                display: block;
-            }
-
-
-            .topbar {
-
-                padding:
-                    0 20px;
-            }
-
-
-            .content {
-
-                padding:
-                    25px 20px;
-            }
-        }
-
-
-        @media (max-width: 600px) {
-
-            .admin-profile > div {
-
-                display: none;
-            }
-
-
-            .appointment-table {
-
-                min-width: 700px;
-            }
-
-
-            .table-wrapper {
-
-                overflow-x: auto;
-            }
-        }
-
-    </style>
+</style>
 
 </head>
 
@@ -2180,731 +1845,814 @@ function statusClass($status)
 <body>
 
 
-<aside
-    class="sidebar"
-    id="sidebar"
->
+<!-- ======================================================
+     SHARED ADMIN SIDEBAR
+     
+     IMPORTANT:
+     This sidebar comes from:
+     /caresched/includes/admin_sidebar.php
+====================================================== -->
+
+<?php
+require_once __DIR__ . '/../includes/admin_sidebar.php';
+?>
 
 
-    <div class="sidebar-brand">
-
-        <div class="brand-icon">
-
-            <i class="fa-solid fa-heart-pulse"></i>
-
-        </div>
-
-
-        <div class="brand-text">
-
-            <strong>
-                CareSched
-            </strong>
-
-            <span>
-                Admin Portal
-            </span>
-
-        </div>
-
-    </div>
-
-
-    <div class="menu-label">
-        Main Menu
-    </div>
-
-
-    <a
-        href="dashboard.php"
-        class="sidebar-link"
-    >
-
-        <i class="fa-solid fa-grid-2"></i>
-
-        Dashboard
-
-    </a>
-
-
-    <a
-        href="appointments.php"
-        class="sidebar-link active"
-    >
-
-        <i class="fa-solid fa-calendar-check"></i>
-
-        Appointments
-
-    </a>
-
-
-    <a
-        href="patients.php"
-        class="sidebar-link"
-    >
-
-        <i class="fa-solid fa-users"></i>
-
-        Patients
-
-    </a>
-
-
-    <div class="menu-label">
-        Management
-    </div>
-
-
-    <a
-        href="services.php"
-        class="sidebar-link"
-    >
-
-        <i class="fa-solid fa-stethoscope"></i>
-
-        Services
-
-    </a>
-
-
-    <a
-        href="schedules.php"
-        class="sidebar-link"
-    >
-
-        <i class="fa-solid fa-calendar-days"></i>
-
-        Schedules
-
-    </a>
-
-
-    <a
-        href="notifications.php"
-        class="sidebar-link"
-    >
-
-        <i class="fa-solid fa-bell"></i>
-
-        Notifications
-
-    </a>
-
-
-    <div class="menu-label">
-        System
-    </div>
-
-
-    <a
-        href="settings.php"
-        class="sidebar-link"
-    >
-
-        <i class="fa-solid fa-gear"></i>
-
-        Settings
-
-    </a>
-
-
-    <div class="sidebar-bottom">
-
-        <a
-            href="/caresched/logout.php"
-            class="sidebar-link logout-link"
-            onclick="
-                return confirm(
-                    'Are you sure you want to logout?'
-                );
-            "
-        >
-
-            <i class="fa-solid fa-right-from-bracket"></i>
-
-            Logout
-
-        </a>
-
-    </div>
-
-
-</aside>
-
+<!-- ======================================================
+     MAIN CONTENT
+====================================================== -->
 
 <main class="main">
 
 
-    <header class="topbar">
+<!-- TOPBAR -->
 
+<div class="topbar">
 
-        <div
-            class="d-flex align-items-center gap-3"
-        >
+<div>
 
-            <button
-                class="menu-toggle"
-                id="menuToggle"
-                type="button"
-            >
+<h1 class="page-title">
+    Appointments
+</h1>
 
-                <i class="fa-solid fa-bars"></i>
+<div class="page-subtitle">
+    Manage and monitor patient appointment requests.
+</div>
 
-            </button>
+</div>
 
 
-            <div class="page-title">
+<div class="admin-badge">
 
-                <h1>
-                    Appointments
-                </h1>
+<i class="bi bi-shield-check text-primary me-1"></i>
 
-                <p>
-                    Manage patient appointment bookings
-                </p>
+Administrator
 
-            </div>
+</div>
 
-        </div>
+</div>
 
 
-        <div class="admin-profile">
+<!-- ======================================================
+     ALERTS
+====================================================== -->
 
-            <div class="admin-avatar">
+<?php if ($success): ?>
 
-                <i class="fa-solid fa-user-shield"></i>
+<div class="alert alert-success alert-custom">
 
-            </div>
+<i class="bi bi-check-circle-fill me-2"></i>
 
+<?= htmlspecialchars($success) ?>
 
-            <div>
+</div>
 
-                <strong>
-                    Administrator
-                </strong>
+<?php endif; ?>
 
-                <span>
-                    RHU Arakan
-                </span>
 
-            </div>
+<?php if ($error): ?>
 
-        </div>
+<div class="alert alert-danger alert-custom">
 
+<i class="bi bi-exclamation-circle-fill me-2"></i>
 
-    </header>
+<?= htmlspecialchars($error) ?>
 
+</div>
 
-    <section class="content">
+<?php endif; ?>
 
 
-        <div class="section-card">
+<!-- ======================================================
+     STATISTICS
+====================================================== -->
 
+<div class="stats">
 
-            <div class="section-header">
 
-                <div>
+<!-- TOTAL -->
 
-                    <h3>
-                        All Appointments
-                    </h3>
+<div class="stat-card">
 
-                    <span>
+<div class="stat-icon">
 
-                        <?= e($total_rows) ?>
+<i class="bi bi-calendar3"></i>
 
-                        total record
+</div>
 
-                        <?= $total_rows === 1 ? '' : 's' ?>
+<div class="stat-number">
 
-                    </span>
+<?= $totalAppointments ?>
 
-                </div>
+</div>
 
-            </div>
+<div class="stat-label">
 
+Total Appointments
 
-            <div class="filter-bar">
+</div>
 
+</div>
 
-                <div class="filter-tabs">
 
+<!-- PENDING -->
 
-                    <?php
+<div class="stat-card">
 
-                    foreach (
-                        [
-                            'all' => 'All',
-                            'Pending' => 'Pending',
-                            'Approved' => 'Approved',
-                            'Rejected' => 'Rejected',
-                            'Completed' => 'Completed',
-                            'Cancelled' => 'Cancelled'
-                        ]
-                        as $key => $label
-                    ):
+<div class="stat-icon">
 
-                    ?>
+<i class="bi bi-hourglass-split"></i>
 
+</div>
 
-                        <a
-                            href="?status=<?= e($key) ?><?= $date_filter ? '&date=' . e($date_filter) : '' ?>"
-                            class="filter-tab <?= $status_filter === $key ? 'active' : '' ?>"
-                        >
+<div class="stat-number">
 
-                            <?= e($label) ?>
+<?= $pendingCount ?>
 
-                            <span class="count">
+</div>
 
-                                <?= e(
-                                    $tab_counts[$key] ?? 0
-                                ) ?>
+<div class="stat-label">
 
-                            </span>
+Pending
 
-                        </a>
+</div>
 
+</div>
 
-                    <?php endforeach; ?>
 
+<!-- APPROVED -->
 
-                </div>
+<div class="stat-card">
 
+<div class="stat-icon">
 
-                <form
-                    class="search-box"
-                    method="get"
-                >
+<i class="bi bi-check-circle"></i>
 
+</div>
 
-                    <?php if ($status_filter !== 'all'): ?>
+<div class="stat-number">
 
-                        <input
-                            type="hidden"
-                            name="status"
-                            value="<?= e($status_filter) ?>"
-                        >
+<?= $approvedCount ?>
 
-                    <?php endif; ?>
+</div>
 
+<div class="stat-label">
 
-                    <input
-                        type="text"
-                        name="q"
-                        placeholder="Search patient name..."
-                        value="<?= e($search) ?>"
-                    >
+Approved
 
+</div>
 
-                    <button type="submit">
+</div>
 
-                        <i class="fa-solid fa-search"></i>
 
-                    </button>
+<!-- COMPLETED -->
 
+<div class="stat-card">
 
-                </form>
+<div class="stat-icon">
 
+<i class="bi bi-check2-all"></i>
 
-            </div>
+</div>
 
+<div class="stat-number">
 
-            <?php if (!empty($appointments)): ?>
+<?= $completedCount ?>
 
+</div>
 
-                <div class="table-wrapper">
+<div class="stat-label">
 
+Completed
 
-                    <table class="appointment-table">
+</div>
 
+</div>
 
-                        <thead>
 
-                            <tr>
+<!-- REJECTED / CANCELLED -->
 
-                                <th>
-                                    Patient
-                                </th>
+<div class="stat-card">
 
-                                <th>
-                                    Service
-                                </th>
+<div class="stat-icon">
 
-                                <th>
-                                    Date
-                                </th>
+<i class="bi bi-x-circle"></i>
 
-                                <th>
-                                    Time
-                                </th>
+</div>
 
-                                <th>
-                                    Status
-                                </th>
+<div class="stat-number">
 
-                                <th>
-                                    Actions
-                                </th>
+<?= $rejectedCount + $cancelledCount ?>
 
-                            </tr>
+</div>
 
-                        </thead>
+<div class="stat-label">
 
+Rejected / Cancelled
 
-                        <tbody>
+</div>
 
+</div>
 
-                        <?php foreach (
-                            $appointments
-                            as $appointment
-                        ): ?>
 
+</div>
 
-                            <tr>
 
+<!-- ======================================================
+     APPOINTMENTS
+====================================================== -->
 
-                                <td>
+<div class="card-main">
 
-                                    <div class="patient-name">
 
-                                        <?= e(
-                                            $appointment['first_name']
-                                            . ' '
-                                            . $appointment['last_name']
-                                        ) ?>
+<div class="card-header-custom">
 
-                                    </div>
+<h5>
 
-                                </td>
+<i class="bi bi-calendar-check text-primary me-2"></i>
 
+Appointment Requests
 
-                                <td>
+</h5>
 
-                                    <span
-                                        class="service-name"
-                                    >
 
-                                        <?= e(
-                                            $appointment['service_name']
-                                        ) ?>
+<span class="badge text-bg-light">
 
-                                    </span>
+<?= $totalAppointments ?>
 
-                                </td>
+records
 
+</span>
 
-                                <td>
+</div>
 
-                                    <?= e(
-                                        date(
-                                            'M d, Y',
-                                            strtotime(
-                                                $appointment[
-                                                    'appointment_date'
-                                                ]
-                                            )
-                                        )
-                                    ) ?>
 
-                                </td>
+<?php if (empty($appointments)): ?>
 
+<div class="empty">
 
-                                <td>
+<i class="bi bi-calendar-x"></i>
 
-                                    <?= e(
-                                        date(
-                                            'h:i A',
-                                            strtotime(
-                                                $appointment[
-                                                    'appointment_time'
-                                                ]
-                                            )
-                                        )
-                                    ) ?>
+<h5>
+    No appointments found
+</h5>
 
-                                </td>
+<p>
+    There are currently no appointment records.
+</p>
 
+</div>
 
-                                <td>
 
-                                    <span
-                                        class="status <?= statusClass($appointment['status']) ?>"
-                                    >
+<?php else: ?>
 
-                                        <?= e(
-                                            $appointment['status']
-                                        ) ?>
 
-                                    </span>
+<div class="table-responsive">
 
-                                </td>
+<table class="table mb-0">
 
+<thead>
 
-                                <td>
+<tr>
 
+<th>
+    Patient
+</th>
 
-                                    <div class="action-btns">
+<th>
+    Service
+</th>
 
+<th>
+    Date & Time
+</th>
 
-                                        <a
-                                            href="appointment-view.php?id=<?= (int) $appointment['id'] ?>"
-                                            class="icon-btn view"
-                                            title="View"
-                                        >
+<th>
+    Status
+</th>
 
-                                            <i
-                                                class="fa-solid fa-eye"
-                                            ></i>
+<th>
+    Action
+</th>
 
-                                        </a>
+</tr>
 
+</thead>
 
-                                        <?php if (
-                                            strtolower(
-                                                $appointment['status']
-                                            ) === 'pending'
-                                        ): ?>
 
+<tbody>
 
-                                            <!-- APPROVE -->
 
-                                            <form
-                                                method="post"
-                                                style="display:inline;"
-                                            >
+<?php foreach ($appointments as $appointment): ?>
 
-                                                <input
-                                                    type="hidden"
-                                                    name="action"
-                                                    value="update_status"
-                                                >
 
-                                                <input
-                                                    type="hidden"
-                                                    name="id"
-                                                    value="<?= (int) $appointment['id'] ?>"
-                                                >
+<?php
 
-                                                <input
-                                                    type="hidden"
-                                                    name="status"
-                                                    value="Approved"
-                                                >
+$patientName =
+    patientFullName(
+        $appointment
+    );
 
-                                                <button
-                                                    type="submit"
-                                                    class="icon-btn approve"
-                                                    title="Approve"
-                                                >
+?>
 
-                                                    <i
-                                                        class="fa-solid fa-check"
-                                                    ></i>
 
-                                                </button>
+<tr>
 
-                                            </form>
 
+<!-- ==================================================
+     PATIENT
+================================================== -->
 
-                                            <!-- REJECT -->
+<td>
 
-                                            <form
-                                                method="post"
-                                                style="display:inline;"
-                                                onsubmit="
-                                                    return confirm(
-                                                        'Reject this appointment?'
-                                                    );
-                                                "
-                                            >
+<div class="patient-name">
 
-                                                <input
-                                                    type="hidden"
-                                                    name="action"
-                                                    value="update_status"
-                                                >
+<?= htmlspecialchars(
+    $patientName
+) ?>
 
-                                                <input
-                                                    type="hidden"
-                                                    name="id"
-                                                    value="<?= (int) $appointment['id'] ?>"
-                                                >
+</div>
 
-                                                <input
-                                                    type="hidden"
-                                                    name="status"
-                                                    value="Rejected"
-                                                >
 
-                                                <button
-                                                    type="submit"
-                                                    class="icon-btn reject"
-                                                    title="Reject"
-                                                >
+<div class="patient-email">
 
-                                                    <i
-                                                        class="fa-solid fa-xmark"
-                                                    ></i>
+<i class="bi bi-envelope me-1"></i>
 
-                                                </button>
+<?= htmlspecialchars(
+    $appointment['email']
+) ?>
 
-                                            </form>
+</div>
 
 
-                                        <?php endif; ?>
+<?php if (
+    !empty(
+        $appointment['contact_number']
+    )
+): ?>
 
+<div class="patient-email">
 
-                                    </div>
+<i class="bi bi-telephone me-1"></i>
 
+<?= htmlspecialchars(
+    $appointment['contact_number']
+) ?>
 
-                                </td>
+</div>
 
+<?php endif; ?>
 
-                            </tr>
+</td>
 
 
-                        <?php endforeach; ?>
+<!-- ==================================================
+     SERVICE
+================================================== -->
 
+<td>
 
-                        </tbody>
+<div class="service-name">
 
+<?= htmlspecialchars(
+    $appointment['service_name']
+) ?>
 
-                    </table>
+</div>
 
 
-                </div>
+<?php if (
+    !empty(
+        $appointment['duration']
+    )
+): ?>
 
+<div class="patient-email">
 
-                <div class="pagination-bar">
+<?= (int)$appointment['duration'] ?>
 
+minutes
 
-                    <span>
+</div>
 
-                        Page
-                        <?= e($page) ?>
+<?php endif; ?>
 
-                        of
+</td>
 
-                        <?= e($total_pages) ?>
 
-                    </span>
+<!-- ==================================================
+     DATE / TIME
+================================================== -->
 
+<td>
 
-                    <div class="d-flex gap-2">
+<div class="date-main">
 
+<?= date(
+    'M d, Y',
+    strtotime(
+        $appointment['appointment_date']
+    )
+) ?>
 
-                        <a
-                            class="page-link <?= $page <= 1 ? 'disabled' : '' ?>"
-                            href="?page=<?= $page - 1 ?>&status=<?= e($status_filter) ?>&q=<?= e($search) ?>"
-                        >
+</div>
 
-                            <i
-                                class="fa-solid fa-chevron-left"
-                            ></i>
 
-                        </a>
+<div class="time-main">
 
+<i class="bi bi-clock me-1"></i>
 
-                        <a
-                            class="page-link <?= $page >= $total_pages ? 'disabled' : '' ?>"
-                            href="?page=<?= $page + 1 ?>&status=<?= e($status_filter) ?>&q=<?= e($search) ?>"
-                        >
+<?= date(
+    'h:i A',
+    strtotime(
+        $appointment['appointment_time']
+    )
+) ?>
 
-                            <i
-                                class="fa-solid fa-chevron-right"
-                            ></i>
+</div>
 
-                        </a>
+</td>
 
 
-                    </div>
+<!-- ==================================================
+     STATUS
+================================================== -->
 
+<td>
 
-                </div>
+<span class="status <?= statusClass(
+    $appointment['status']
+) ?>">
 
 
-            <?php else: ?>
+<?php if (
+    $appointment['status']
+    === 'Pending'
+): ?>
 
+<i class="bi bi-hourglass-split"></i>
 
-                <div class="empty-state">
 
-                    <i
-                        class="fa-solid fa-calendar-xmark"
-                    ></i>
+<?php elseif (
+    $appointment['status']
+    === 'Approved'
+): ?>
 
-                    <p>
-                        No appointments found for this filter.
-                    </p>
+<i class="bi bi-check-circle"></i>
 
-                </div>
 
+<?php elseif (
+    $appointment['status']
+    === 'Completed'
+): ?>
 
-            <?php endif; ?>
+<i class="bi bi-check2-all"></i>
 
 
-        </div>
+<?php elseif (
+    $appointment['status']
+    === 'Rejected'
+): ?>
 
+<i class="bi bi-x-circle"></i>
 
-    </section>
+
+<?php else: ?>
+
+<i class="bi bi-slash-circle"></i>
+
+<?php endif; ?>
+
+
+<?= htmlspecialchars(
+    $appointment['status']
+) ?>
+
+</span>
+
+
+<?php if (
+    $appointment['status']
+    === 'Rejected'
+    &&
+    !empty(
+        $appointment['rejection_reason']
+    )
+): ?>
+
+<div
+    class="patient-email mt-2"
+    title="<?= htmlspecialchars(
+        $appointment['rejection_reason']
+    ) ?>"
+>
+
+Reason:
+
+<?= htmlspecialchars(
+    $appointment['rejection_reason']
+) ?>
+
+</div>
+
+<?php endif; ?>
+
+</td>
+
+
+<!-- ==================================================
+     ACTION
+================================================== -->
+
+<td>
+
+<form
+    method="POST"
+    class="action-form"
+    onsubmit="return validateStatusForm(this);"
+>
+
+
+<input
+    type="hidden"
+    name="appointment_id"
+    value="<?= (int)$appointment['appointment_id'] ?>"
+>
+
+
+<select
+    name="status"
+    class="form-select status-select"
+    onchange="toggleReason(this)"
+>
+
+<option
+    value="Pending"
+    <?= $appointment['status'] === 'Pending'
+        ? 'selected'
+        : '' ?>
+>
+    Pending
+</option>
+
+
+<option
+    value="Approved"
+    <?= $appointment['status'] === 'Approved'
+        ? 'selected'
+        : '' ?>
+>
+    Approved
+</option>
+
+
+<option
+    value="Completed"
+    <?= $appointment['status'] === 'Completed'
+        ? 'selected'
+        : '' ?>
+>
+    Completed
+</option>
+
+
+<option
+    value="Rejected"
+    <?= $appointment['status'] === 'Rejected'
+        ? 'selected'
+        : '' ?>
+>
+    Rejected
+</option>
+
+
+<option
+    value="Cancelled"
+    <?= $appointment['status'] === 'Cancelled'
+        ? 'selected'
+        : '' ?>
+>
+    Cancelled
+</option>
+
+</select>
+
+
+<input
+    type="text"
+    name="rejection_reason"
+    class="form-control rejection-input"
+    placeholder="Reason for rejection"
+    value="<?= htmlspecialchars(
+        $appointment['rejection_reason'] ?? ''
+    ) ?>"
+    style="
+        display:
+        <?= $appointment['status'] === 'Rejected'
+            ? 'block'
+            : 'none'
+        ?>;
+        min-width:190px;
+        margin-top:5px;
+        font-size:10px;
+    "
+>
+
+
+<button
+    type="submit"
+    class="btn-update"
+>
+
+<i class="bi bi-send me-1"></i>
+
+Update
+
+</button>
+
+
+</form>
+
+</td>
+
+
+</tr>
+
+
+<?php endforeach; ?>
+
+
+</tbody>
+
+</table>
+
+</div>
+
+<?php endif; ?>
+
+
+</div>
 
 
 </main>
 
 
+<!-- ======================================================
+     JAVASCRIPT
+====================================================== -->
+
 <script>
 
-const menuToggle =
-    document.getElementById(
-        'menuToggle'
-    );
+function toggleReason(select) {
 
-const sidebar =
-    document.getElementById(
-        'sidebar'
-    );
+    const form =
+        select.closest('form');
+
+    if (!form) {
+        return;
+    }
 
 
-if (
-    menuToggle &&
-    sidebar
-) {
+    const reason =
+        form.querySelector(
+            '.rejection-input'
+        );
 
-    menuToggle.addEventListener(
-        'click',
-        function () {
 
-            sidebar.classList.toggle(
-                'show'
-            );
+    if (!reason) {
+        return;
+    }
 
-        }
-    );
 
+    if (
+        select.value === 'Rejected'
+    ) {
+
+        reason.style.display =
+            'block';
+
+        reason.required =
+            true;
+
+    } else {
+
+        reason.style.display =
+            'none';
+
+        reason.required =
+            false;
+
+        reason.value =
+            '';
+    }
 }
 
 
-document.addEventListener(
-    'click',
-    function (event) {
+
+function validateStatusForm(form) {
+
+    const select =
+        form.querySelector(
+            '.status-select'
+        );
+
+
+    const reason =
+        form.querySelector(
+            '.rejection-input'
+        );
+
+
+    if (!select) {
+        return false;
+    }
+
+
+    // Rejection reason required
+    if (
+        select.value === 'Rejected'
+    ) {
 
         if (
-            window.innerWidth <= 850 &&
-            sidebar.classList.contains('show') &&
-            !sidebar.contains(event.target) &&
-            !menuToggle.contains(event.target)
+            !reason
+            ||
+            reason.value.trim() === ''
         ) {
 
-            sidebar.classList.remove(
-                'show'
+            alert(
+                'Please provide a rejection reason.'
             );
 
-        }
 
+            if (reason) {
+                reason.focus();
+            }
+
+
+            return false;
+        }
     }
-);
+
+
+    // Confirmation
+    let message =
+        'Update this appointment status to '
+        + select.value
+        + '?';
+
+
+    if (
+        select.value === 'Rejected'
+    ) {
+
+        message =
+            'Reject this appointment and send the rejection reason to the patient?';
+
+    } else if (
+        select.value === 'Approved'
+    ) {
+
+        message =
+            'Approve this appointment and send an email notification to the patient?';
+
+    } else if (
+        select.value === 'Completed'
+    ) {
+
+        message =
+            'Mark this appointment as completed and notify the patient?';
+
+    } else if (
+        select.value === 'Cancelled'
+    ) {
+
+        message =
+            'Cancel this appointment and notify the patient?';
+    }
+
+
+    return confirm(message);
+}
+
+
+// Initialize rejection fields
+
+document
+    .querySelectorAll(
+        '.status-select'
+    )
+    .forEach(function(select) {
+
+        toggleReason(select);
+
+    });
 
 </script>
+
+
+<script
+src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
 
 
 </body>

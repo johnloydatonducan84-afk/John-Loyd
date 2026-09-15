@@ -78,9 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
 
-            /*
-             * Check if email or username already exists.
-             */
+            /* Check existing email or username */
 
             $stmt = $pdo->prepare("
                 SELECT id
@@ -253,17 +251,22 @@ $token = csrf_token();
 
     <title>Create Account | CareSched</title>
 
+
     <!-- Google Font -->
+
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
 
+
     <!-- Font Awesome -->
+
     <link
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
         rel="stylesheet"
     >
+
 
     <style>
 
@@ -900,7 +903,9 @@ $token = csrf_token();
 
             position: absolute;
 
-            right: 14px;
+            right: 14px !important;
+
+            left: auto !important;
 
             top: 50%;
 
@@ -910,7 +915,7 @@ $token = csrf_token();
 
             pointer-events: none;
 
-            font-size: 11px;
+            font-size: 11px !important;
 
         }
 
@@ -921,7 +926,7 @@ $token = csrf_token();
 
         .password-input {
 
-            padding-right: 44px;
+            padding-right: 48px;
 
         }
 
@@ -930,13 +935,25 @@ $token = csrf_token();
 
             position: absolute;
 
-            right: 13px;
+            right: 12px;
 
             top: 50%;
 
             transform: translateY(-50%);
 
+            width: 32px;
+
+            height: 32px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
             border: none;
+
+            outline: none;
 
             background: transparent;
 
@@ -944,7 +961,9 @@ $token = csrf_token();
 
             cursor: pointer;
 
-            padding: 4px;
+            padding: 0;
+
+            z-index: 5;
 
             transition: 0.2s ease;
 
@@ -954,6 +973,30 @@ $token = csrf_token();
         .password-toggle:hover {
 
             color: var(--primary);
+
+        }
+
+
+        .password-toggle:focus {
+
+            color: var(--primary);
+
+        }
+
+
+        .password-toggle i {
+
+            position: static !important;
+
+            left: auto !important;
+
+            top: auto !important;
+
+            transform: none !important;
+
+            pointer-events: none;
+
+            font-size: 14px;
 
         }
 
@@ -1034,7 +1077,13 @@ $token = csrf_token();
         }
 
 
-        .error-box i {
+        .error-box > i {
+
+            position: static;
+
+            transform: none;
+
+            color: var(--danger);
 
             margin-top: 1px;
 
@@ -1080,6 +1129,10 @@ $token = csrf_token();
 
 
         .security i {
+
+            position: static;
+
+            transform: none;
 
             color: var(--primary);
 
@@ -1362,7 +1415,6 @@ $token = csrf_token();
 
 
 <div class="register-page">
-
 
     <div class="register-card">
 
@@ -1878,6 +1930,7 @@ $token = csrf_token();
                                 class="password-toggle"
                                 id="togglePassReg"
                                 aria-label="Show password"
+                                title="Show password"
                             >
 
                                 <i class="fa-solid fa-eye"></i>
@@ -1936,6 +1989,7 @@ $token = csrf_token();
                                 class="password-toggle"
                                 id="toggleConfirm"
                                 aria-label="Show password"
+                                title="Show password"
                             >
 
                                 <i class="fa-solid fa-eye"></i>
@@ -2006,16 +2060,13 @@ $token = csrf_token();
 <script>
 
 /* =========================================
-   PASSWORD TOGGLE
+   PASSWORD SHOW / HIDE
 ========================================= */
 
 function setupPasswordToggle(buttonId, inputId) {
 
-    const button =
-        document.getElementById(buttonId);
-
-    const input =
-        document.getElementById(inputId);
+    const button = document.getElementById(buttonId);
+    const input = document.getElementById(inputId);
 
     if (!button || !input) {
         return;
@@ -2023,24 +2074,45 @@ function setupPasswordToggle(buttonId, inputId) {
 
     button.addEventListener('click', function () {
 
-        const icon =
-            button.querySelector('i');
+        const icon = button.querySelector('i');
 
         if (input.type === 'password') {
+
+            /* SHOW PASSWORD */
 
             input.type = 'text';
 
             icon.classList.remove('fa-eye');
-
             icon.classList.add('fa-eye-slash');
 
+            button.setAttribute(
+                'aria-label',
+                'Hide password'
+            );
+
+            button.setAttribute(
+                'title',
+                'Hide password'
+            );
+
         } else {
+
+            /* HIDE PASSWORD */
 
             input.type = 'password';
 
             icon.classList.remove('fa-eye-slash');
-
             icon.classList.add('fa-eye');
+
+            button.setAttribute(
+                'aria-label',
+                'Show password'
+            );
+
+            button.setAttribute(
+                'title',
+                'Show password'
+            );
 
         }
 
@@ -2049,11 +2121,15 @@ function setupPasswordToggle(buttonId, inputId) {
 }
 
 
+/* PASSWORD */
+
 setupPasswordToggle(
     'togglePassReg',
     'password_reg'
 );
 
+
+/* CONFIRM PASSWORD */
 
 setupPasswordToggle(
     'toggleConfirm',
@@ -2077,74 +2153,83 @@ const strengthFill =
 
 if (passwordInput) {
 
-    passwordInput.addEventListener('input', function () {
+    passwordInput.addEventListener(
+        'input',
+        function () {
 
-        const password = this.value;
+            const password = this.value;
 
-        if (password.length === 0) {
+            if (password.length === 0) {
 
-            passwordStrength.style.display = 'none';
+                passwordStrength.style.display =
+                    'none';
 
-            strengthFill.style.width = '0%';
+                strengthFill.style.width =
+                    '0%';
 
-            return;
+                return;
+            }
+
+
+            passwordStrength.style.display =
+                'block';
+
+
+            let score = 0;
+
+
+            if (password.length >= 8) {
+                score++;
+            }
+
+
+            if (/[A-Z]/.test(password)) {
+                score++;
+            }
+
+
+            if (/[a-z]/.test(password)) {
+                score++;
+            }
+
+
+            if (/[0-9]/.test(password)) {
+                score++;
+            }
+
+
+            if (/[^A-Za-z0-9]/.test(password)) {
+                score++;
+            }
+
+
+            const percentage =
+                Math.min(score * 20, 100);
+
+
+            strengthFill.style.width =
+                percentage + '%';
+
+
+            if (score <= 2) {
+
+                strengthFill.style.background =
+                    '#ef4444';
+
+            } else if (score === 3) {
+
+                strengthFill.style.background =
+                    '#f59e0b';
+
+            } else {
+
+                strengthFill.style.background =
+                    '#16a34a';
+
+            }
 
         }
-
-
-        passwordStrength.style.display = 'block';
-
-
-        let score = 0;
-
-
-        if (password.length >= 8) {
-            score++;
-        }
-
-        if (/[A-Z]/.test(password)) {
-            score++;
-        }
-
-        if (/[a-z]/.test(password)) {
-            score++;
-        }
-
-        if (/[0-9]/.test(password)) {
-            score++;
-        }
-
-        if (/[^A-Za-z0-9]/.test(password)) {
-            score++;
-        }
-
-
-        const percentage =
-            Math.min(score * 20, 100);
-
-
-        strengthFill.style.width =
-            percentage + '%';
-
-
-        if (score <= 2) {
-
-            strengthFill.style.background =
-                '#ef4444';
-
-        } else if (score === 3) {
-
-            strengthFill.style.background =
-                '#f59e0b';
-
-        } else {
-
-            strengthFill.style.background =
-                '#16a34a';
-
-        }
-
-    });
+    );
 
 }
 
@@ -2166,50 +2251,53 @@ const ageInput =
 
 if (birthDate && ageInput) {
 
-    birthDate.addEventListener('change', function () {
+    birthDate.addEventListener(
+        'change',
+        function () {
 
-        if (!this.value) {
-            return;
+            if (!this.value) {
+                return;
+            }
+
+
+            const birth =
+                new Date(this.value);
+
+            const today =
+                new Date();
+
+
+            let age =
+                today.getFullYear() -
+                birth.getFullYear();
+
+
+            const month =
+                today.getMonth() -
+                birth.getMonth();
+
+
+            if (
+                month < 0 ||
+                (
+                    month === 0 &&
+                    today.getDate() < birth.getDate()
+                )
+            ) {
+
+                age--;
+
+            }
+
+
+            if (age >= 0 && age <= 120) {
+
+                ageInput.value = age;
+
+            }
+
         }
-
-
-        const birth =
-            new Date(this.value);
-
-        const today =
-            new Date();
-
-
-        let age =
-            today.getFullYear() -
-            birth.getFullYear();
-
-
-        const month =
-            today.getMonth() -
-            birth.getMonth();
-
-
-        if (
-            month < 0 ||
-            (
-                month === 0 &&
-                today.getDate() < birth.getDate()
-            )
-        ) {
-
-            age--;
-
-        }
-
-
-        if (age >= 0 && age <= 120) {
-
-            ageInput.value = age;
-
-        }
-
-    });
+    );
 
 }
 
@@ -2224,30 +2312,64 @@ const confirmInput =
 
 if (confirmInput && passwordInput) {
 
-    confirmInput.addEventListener('input', function () {
+    confirmInput.addEventListener(
+        'input',
+        function () {
 
-        if (this.value === '') {
+            if (this.value === '') {
 
-            this.style.borderColor = '';
+                this.style.borderColor = '';
 
-            return;
+                return;
+
+            }
+
+
+            if (
+                this.value ===
+                passwordInput.value
+            ) {
+
+                this.style.borderColor =
+                    '#16a34a';
+
+            } else {
+
+                this.style.borderColor =
+                    '#ef4444';
+
+            }
 
         }
+    );
 
 
-        if (this.value === passwordInput.value) {
+    passwordInput.addEventListener(
+        'input',
+        function () {
 
-            this.style.borderColor =
-                '#16a34a';
+            if (confirmInput.value === '') {
+                return;
+            }
 
-        } else {
 
-            this.style.borderColor =
-                '#ef4444';
+            if (
+                confirmInput.value ===
+                passwordInput.value
+            ) {
+
+                confirmInput.style.borderColor =
+                    '#16a34a';
+
+            } else {
+
+                confirmInput.style.borderColor =
+                    '#ef4444';
+
+            }
 
         }
-
-    });
+    );
 
 }
 
