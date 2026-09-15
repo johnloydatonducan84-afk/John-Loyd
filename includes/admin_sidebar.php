@@ -31,15 +31,23 @@ function sidebar_active(string $page, string $currentPage): string
     background: linear-gradient(180deg, #081b33 0%, #0b294a 55%, #07182d 100%);
     color: #fff;
     z-index: 2000;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     transition: transform .3s ease, box-shadow .3s ease;
     box-shadow: 8px 0 30px rgba(8,27,51,.10);
 }
 
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-track { background: transparent; }
-.sidebar::-webkit-scrollbar-thumb {
+.sidebar-menu {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-menu::-webkit-scrollbar { width: 4px; }
+.sidebar-menu::-webkit-scrollbar-track { background: transparent; }
+.sidebar-menu::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,.16);
     border-radius: 10px;
 }
@@ -151,8 +159,18 @@ function sidebar_active(string $page, string $currentPage): string
 }
 
 .sidebar-bottom {
-    margin-top: auto;
-    padding-top: 18px;
+    /*
+     * A few pages still carry an old leftover ".sidebar-bottom { position:
+     * absolute; bottom:20px; ... }" rule in their own <style> block from
+     * before this shared sidebar existed. That overlaps this section on
+     * top of the menu instead of stacking below it (hiding Logout on
+     * short/mobile screens). Explicitly forcing static positioning here
+     * wins the cascade over that stray rule and keeps it pinned via flex.
+     */
+    position: static !important;
+    flex-shrink: 0;
+    padding-top: 14px;
+    margin-top: 10px;
     border-top: 1px solid rgba(255,255,255,.08);
 }
 
@@ -271,6 +289,8 @@ html[data-theme="dark"] body {
 
 <aside class="sidebar" id="sidebar">
 
+<div class="sidebar-menu">
+
     <a href="dashboard.php" class="sidebar-brand">
         <div class="brand-icon">
             <i class="fa-solid fa-heart-pulse"></i>
@@ -328,6 +348,8 @@ html[data-theme="dark"] body {
         <i class="fa-solid fa-gear"></i>
         <span>Settings</span>
     </a>
+
+</div>
 
     <div class="sidebar-bottom">
         <div class="theme-toggle-row">
