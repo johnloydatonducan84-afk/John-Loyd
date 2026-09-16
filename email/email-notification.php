@@ -22,25 +22,29 @@ function sendEmailNotification(
 
         // ==========================================
         // SMTP CONFIGURATION
+        //
+        // Loaded from config/local.php (gitignored) so the real
+        // Gmail app password is never exposed in the public repo.
         // ==========================================
+
+        $appConfig = require __DIR__ . '/../config/config.php';
 
         $mail->isSMTP();
 
-        $mail->Host = 'smtp.gmail.com';
+        $mail->Host = $appConfig['smtp']['host'];
 
         $mail->SMTPAuth = true;
 
         // CareSched Gmail Account
-        $mail->Username = 'johnloydatonducan84@gmail.com';
+        $mail->Username = $appConfig['smtp']['username'];
 
-        // PUT YOUR NEW GMAIL APP PASSWORD HERE
-        $mail->Password = 'mycz fpmd nmiw wvyi';
+        $mail->Password = $appConfig['smtp']['password'];
 
         // Gmail TLS
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
 
         // Gmail SMTP Port
-        $mail->Port = 587;
+        $mail->Port = $appConfig['smtp']['port'];
 
         // Connection timeout
         $mail->Timeout = 30;
@@ -54,8 +58,8 @@ function sendEmailNotification(
         // ==========================================
 
         $mail->setFrom(
-            'johnloydatonducan84@gmail.com',
-            'CareSched - RHU Arakan'
+            $appConfig['smtp']['username'],
+            $appConfig['smtp']['from_name']
         );
 
 

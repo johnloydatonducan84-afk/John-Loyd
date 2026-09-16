@@ -29,21 +29,36 @@ jobs:
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_FROM_NAME: ${{ secrets.SMTP_FROM_NAME }}
         run: |
-          if [ -n "$DB_HOST" ] && [ -n "$DB_NAME" ] && [ -n "$DB_USER" ]; then
-            php -r '
-              $config = [
-                  "db_host" => getenv("DB_HOST"),
-                  "db_name" => getenv("DB_NAME"),
-                  "db_user" => getenv("DB_USER"),
-                  "db_pass" => getenv("DB_PASS"),
-              ];
-              file_put_contents("config/local.php", "<?php\nreturn " . var_export($config, true) . ";\n");
-              echo "config/local.php generated.\n";
-            '
-          else
-            echo "DB_HOST / DB_NAME / DB_USER secrets not set - skipping config/local.php generation."
-          fi
+          php -r '
+            $config = [];
+
+            if (getenv("DB_HOST") && getenv("DB_NAME") && getenv("DB_USER")) {
+                $config["db_host"] = getenv("DB_HOST");
+                $config["db_name"] = getenv("DB_NAME");
+                $config["db_user"] = getenv("DB_USER");
+                $config["db_pass"] = getenv("DB_PASS");
+            }
+
+            if (getenv("SMTP_USERNAME") && getenv("SMTP_PASSWORD")) {
+                $config["smtp"] = [
+                    "username" => getenv("SMTP_USERNAME"),
+                    "password" => getenv("SMTP_PASSWORD"),
+                    "from_name" => getenv("SMTP_FROM_NAME") ?: "CareSched",
+                ];
+            }
+
+            if (empty($config)) {
+                echo "No DB_* or SMTP_* secrets set - skipping config/local.php generation.\n";
+                exit;
+            }
+
+            file_put_contents("config/local.php", "<?php\nreturn " . var_export($config, true) . ";\n");
+            echo "config/local.php generated with keys: " . implode(", ", array_keys($config)) . "\n";
+          '
 
       - name: Deploy to ProFreeHost
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6

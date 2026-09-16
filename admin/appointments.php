@@ -12,26 +12,18 @@ ensure_role('admin');
 
 // ======================================================
 // SMTP CONFIGURATION
+//
+// Loaded from config/local.php (gitignored - never committed) so
+// the real Gmail app password is never exposed in the public repo.
 // ======================================================
 
-const SMTP_HOST = 'smtp.gmail.com';
-const SMTP_PORT = 587;
-const SMTP_USERNAME = 'johnloydatonducan84@gmail.com';
+$appConfig = require __DIR__ . '/../config/config.php';
 
-/*
-|--------------------------------------------------------------------------
-| IMPORTANT
-|--------------------------------------------------------------------------
-| Use a NEW Gmail APP PASSWORD here.
-| Do NOT use your normal Gmail password.
-|
-| Example:
-| const SMTP_PASSWORD = 'xxxx xxxx xxxx xxxx';
-|
-*/
-const SMTP_PASSWORD = 'fkmt qqeb tlaa gsdf';
-
-const SMTP_FROM_NAME = 'CareSched - RHU Arakan';
+define('SMTP_HOST', $appConfig['smtp']['host']);
+define('SMTP_PORT', $appConfig['smtp']['port']);
+define('SMTP_USERNAME', $appConfig['smtp']['username']);
+define('SMTP_PASSWORD', $appConfig['smtp']['password']);
+define('SMTP_FROM_NAME', $appConfig['smtp']['from_name']);
 
 
 // ======================================================
