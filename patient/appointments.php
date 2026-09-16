@@ -969,6 +969,51 @@ function statusClass($status)
 
         }
 
+
+        /* PRINT */
+
+        .print-only-header {
+            display: none;
+        }
+
+        @media print {
+
+            .top-navbar,
+            .footer,
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only-header {
+                display: block;
+                margin-bottom: 18px;
+                padding-bottom: 12px;
+                border-bottom: 2px solid #0d6efd;
+            }
+
+            .print-brand {
+                font-size: 16px;
+                font-weight: 800;
+                margin-bottom: 8px;
+            }
+
+            .print-patient-info {
+                display: flex;
+                gap: 20px;
+                font-size: 11px;
+                color: #334155;
+            }
+
+            body {
+                background: white;
+            }
+
+            .dashboard {
+                padding: 0;
+            }
+
+        }
+
     </style>
 
 </head>
@@ -1088,7 +1133,7 @@ function statusClass($status)
 
                 <a
                     href="<?= e(app_url('patient/dashboard.php')) ?>"
-                    class="back-btn"
+                    class="back-btn no-print"
                 >
 
                     <i
@@ -1100,9 +1145,24 @@ function statusClass($status)
                 </a>
 
 
+                <button
+                    type="button"
+                    class="back-btn no-print"
+                    onclick="window.print()"
+                >
+
+                    <i
+                        class="fa-solid fa-print"
+                    ></i>
+
+                    Print
+
+                </button>
+
+
                 <a
                     href="<?= e(app_url('patient/book-appointment.php')) ?>"
-                    class="book-btn"
+                    class="book-btn no-print"
                 >
 
                     <i
@@ -1118,9 +1178,23 @@ function statusClass($status)
         </div>
 
 
+        <!-- PRINT HEADER (visible only when printing) -->
+
+        <div class="print-only-header">
+            <div class="print-brand">
+                <strong>CareSched</strong> &middot; Rural Health Unit of Arakan
+            </div>
+            <div class="print-patient-info">
+                <div><strong>Patient:</strong> <?= e($patient['first_name'] . ' ' . $patient['last_name']) ?></div>
+                <div><strong>Contact:</strong> <?= e($patient['contact_number'] ?? 'N/A') ?></div>
+                <div><strong>Printed:</strong> <?= e(date('F d, Y h:i A')) ?></div>
+            </div>
+        </div>
+
+
         <!-- FILTER TABS -->
 
-        <div class="filter-tabs">
+        <div class="filter-tabs no-print">
 
             <?php
 

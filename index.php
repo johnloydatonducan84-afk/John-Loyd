@@ -1,16 +1,17 @@
 ﻿<?php
 require_once __DIR__ . '/includes/functions.php';
 
-if (!empty($_SESSION['role'])) {
-    if ($_SESSION['role'] === 'admin') {
-        header('Location: ' . app_url('admin/dashboard.php'));
-        exit;
-    }
-
-    if ($_SESSION['role'] === 'patient') {
-        header('Location: ' . app_url('patient/dashboard.php'));
-        exit;
-    }
+/*
+ * Only patients get auto-redirected to their dashboard from the
+ * public landing page. Admin sessions are intentionally excluded so
+ * visiting the public domain never reveals or jumps to the admin
+ * area just because an admin happens to be logged in on that
+ * browser - the admin login form stays reachable only via its own
+ * explicit link/URL.
+ */
+if (($_SESSION['role'] ?? '') === 'patient') {
+    header('Location: ' . app_url('patient/dashboard.php'));
+    exit;
 }
 ?>
 
