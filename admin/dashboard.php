@@ -83,6 +83,46 @@ $today_stmt = $pdo->query("
 
 $today_appointments_list = $today_stmt->fetchAll(PDO::FETCH_ASSOC);
 
+/*
+|--------------------------------------------------------------------------
+| CHART DATA
+|--------------------------------------------------------------------------
+*/
+
+// Appointments per month for the last 6 months, including this month (zero-filled)
+$trend_start = new DateTime('first day of this month');
+$trend_start->modify('-5 months');
+$trend_end = new DateTime('last day of this month');
+
+$trend_stmt = $pdo->prepare("
+    SELECT DATE_FORMAT(appointment_date, '%Y-%m') AS month_key, COUNT(*) AS total
+    FROM appointments
+    WHERE appointment_date BETWEEN ? AND ?
+    GROUP BY month_key
+");
+$trend_stmt->execute([$trend_start->format('Y-m-d'), $trend_end->format('Y-m-d')]);
+$trend_counts = $trend_stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$trend_labels = [];
+$trend_values = [];
+$trend_month = clone $trend_start;
+for ($i = 0; $i < 6; $i++) {
+    $trend_labels[] = $trend_month->format('M Y');
+    $trend_values[] = (int) ($trend_counts[$trend_month->format('Y-m')] ?? 0);
+    $trend_month->modify('+1 month');
+}
+
+// Appointments by status (fixed order so colors always match the status)
+$status_counts = $pdo
+    ->query("SELECT status, COUNT(*) FROM appointments GROUP BY status")
+    ->fetchAll(PDO::FETCH_KEY_PAIR);
+
+$status_order = ['Pending', 'Approved', 'Completed', 'Cancelled', 'Rejected'];
+$status_values = [];
+foreach ($status_order as $status_name) {
+    $status_values[] = (int) ($status_counts[$status_name] ?? 0);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -552,6 +592,12 @@ $today_appointments_list = $today_stmt->fetchAll(PDO::FETCH_ASSOC);
         /* =====================================================
            QUICK ACTIONS
         ===================================================== */
+
+        .chart-box {
+            position: relative;
+            height: 300px;
+            padding: 18px 22px 16px;
+        }
 
         .section-card {
             background: white;
@@ -1214,6 +1260,67 @@ $today_appointments_list = $today_stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
         <!-- =================================================
+             CHARTS
+        ================================================== -->
+
+        <div class="row g-4 mb-4">
+
+            <div class="col-xl-8">
+
+                <div class="section-card h-100">
+
+                    <div class="section-header">
+                        <div>
+                            <h3>Appointments Overview</h3>
+                            <span>Appointments per month, last 6 months</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-box">
+                        <canvas id="trendChart" aria-label="Bar chart of appointments per month for the last 6 months" role="img"></canvas>
+                    </div>
+
+                    <table class="visually-hidden">
+                        <caption>Appointments per month, last 6 months</caption>
+                        <?php foreach ($trend_labels as $i => $label): ?>
+                            <tr><th><?= e($label) ?></th><td><?= $trend_values[$i] ?></td></tr>
+                        <?php endforeach; ?>
+                    </table>
+
+                </div>
+
+            </div>
+
+            <div class="col-xl-4">
+
+                <div class="section-card h-100">
+
+                    <div class="section-header">
+                        <div>
+                            <h3>Appointments by Status</h3>
+                            <span>All appointments to date</span>
+                        </div>
+                    </div>
+
+                    <div class="chart-box">
+                        <canvas id="statusChart" aria-label="Bar chart of appointments by status" role="img"></canvas>
+                    </div>
+
+                    <table class="visually-hidden">
+                        <caption>Appointments by status</caption>
+                        <?php foreach ($status_order as $i => $status_name): ?>
+                            <tr><th><?= e($status_name) ?></th><td><?= $status_values[$i] ?></td></tr>
+                        <?php endforeach; ?>
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
              TABLES
         ================================================== -->
 
@@ -1616,6 +1723,118 @@ document.addEventListener(
 
     }
 );
+
+</script>
+
+
+<!-- =========================================================
+     DASHBOARD CHARTS
+========================================================= -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<script>
+
+if (window.Chart) {
+
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#7b8798';
+
+    const tooltipStyle = {
+        backgroundColor: '#172033',
+        titleColor: '#ffffff',
+        bodyColor: '#ffffff',
+        padding: 10,
+        cornerRadius: 8,
+        displayColors: false
+    };
+
+    const gridStyle = { color: '#eef1f5', drawTicks: false };
+
+    // Appointments per day
+    new Chart(document.getElementById('trendChart'), {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode($trend_labels) ?>,
+            datasets: [{
+                label: 'Appointments',
+                data: <?= json_encode($trend_values) ?>,
+                backgroundColor: '#2563eb',
+                hoverBackgroundColor: '#1d4ed8',
+                borderRadius: { topLeft: 4, topRight: 4 },
+                borderSkipped: 'bottom',
+                maxBarThickness: 40
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tooltipStyle,
+                    callbacks: {
+                        label: (ctx) => ctx.parsed.y + (ctx.parsed.y === 1 ? ' appointment' : ' appointments')
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false }, border: { display: false } },
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, padding: 8 },
+                    grid: gridStyle,
+                    border: { display: false }
+                }
+            }
+        }
+    });
+
+    // Appointments by status (colors match the status badges)
+    new Chart(document.getElementById('statusChart'), {
+        type: 'bar',
+        data: {
+            labels: <?= json_encode($status_order) ?>,
+            datasets: [{
+                label: 'Appointments',
+                data: <?= json_encode($status_values) ?>,
+                backgroundColor: ['#d97706', '#16a34a', '#667085', '#b0b8c4', '#dc2626'],
+                borderRadius: { topRight: 4, bottomRight: 4 },
+                borderSkipped: 'left',
+                maxBarThickness: 22
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    ...tooltipStyle,
+                    callbacks: {
+                        label: (ctx) => ctx.parsed.x + (ctx.parsed.x === 1 ? ' appointment' : ' appointments')
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, padding: 8 },
+                    grid: gridStyle,
+                    border: { display: false }
+                },
+                y: {
+                    grid: { display: false },
+                    border: { display: false },
+                    ticks: { color: '#172033', font: { weight: '600' } }
+                }
+            }
+        }
+    });
+
+}
 
 </script>
 
