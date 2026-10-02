@@ -456,6 +456,7 @@ a { text-decoration:none; }
     .search-box input { width:100%; }
 }
 </style>
+<?= brand_favicon_tags() ?>
 </head>
 
 <body>

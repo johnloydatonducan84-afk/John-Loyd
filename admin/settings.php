@@ -1570,6 +1570,7 @@ $initial = strtoupper(
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 <body>

@@ -1408,6 +1408,7 @@ $token = csrf_token();
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 
@@ -1427,9 +1428,9 @@ $token = csrf_token();
 
             <div class="brand-content">
 
-                <div class="logo">
+                <div class="logo" style="background:none;box-shadow:none;padding:0;">
 
-                    <i class="fa-solid fa-heart-pulse"></i>
+                    <?= brand_logo_img() ?>
 
                 </div>
 

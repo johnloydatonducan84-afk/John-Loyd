@@ -1899,6 +1899,7 @@ table {
 
 </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 

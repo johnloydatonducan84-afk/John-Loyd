@@ -1541,6 +1541,7 @@ body {
 
 </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 

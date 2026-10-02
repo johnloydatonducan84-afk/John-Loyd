@@ -648,6 +648,7 @@ if (($_SESSION['role'] ?? '') === 'patient') {
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 
@@ -668,9 +669,9 @@ if (($_SESSION['role'] ?? '') === 'patient') {
 
         <div class="brand">
 
-            <div class="brand-icon">
+            <div class="brand-icon" style="background:none;box-shadow:none;padding:0;">
 
-                <i class="fa-solid fa-heart-pulse"></i>
+                <?= brand_logo_img() ?>
 
             </div>
 

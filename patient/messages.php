@@ -174,13 +174,14 @@ $admin_fullname = $admin['full_name'] ?: $admin['username'];
         .alert-wrap { margin-bottom:18px; }
         @media (max-width:768px) { .bubble { max-width:100%; } }
     </style>
+<?= brand_favicon_tags() ?>
 </head>
 <body>
 
 <nav class="top-navbar">
     <div class="container">
         <div class="navbar-inner">
-            <a href="<?= e(app_url('/')) ?>" class="brand"><i class="fa-solid fa-heart-pulse"></i> Care<span>Sched</span></a>
+            <a href="<?= e(app_url('/')) ?>" class="brand"><?= brand_logo_img('width:1.4em;height:1.4em;display:inline-block;vertical-align:-.3em;') ?> Care<span>Sched</span></a>
             <div class="nav-links">
                 <a href="<?= e(app_url('patient/dashboard.php')) ?>">Dashboard</a>
                 <a href="<?= e(app_url('patient/book-appointment.php')) ?>">Book Appointment</a>

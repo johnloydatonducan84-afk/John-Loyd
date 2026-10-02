@@ -252,6 +252,7 @@ function statusClass($status)
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 <body>

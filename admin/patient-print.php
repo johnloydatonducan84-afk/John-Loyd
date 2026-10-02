@@ -63,6 +63,7 @@ th { background:#fafbfd; font-size:9px; text-transform:uppercase; color:#8995a7;
     body { padding:0; }
 }
 </style>
+<?= brand_favicon_tags() ?>
 </head>
 <body>
 
@@ -72,7 +73,7 @@ th { background:#fafbfd; font-size:9px; text-transform:uppercase; color:#8995a7;
 
 <div class="header">
     <div class="brand">
-        <div class="brand-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+        <div class="brand-icon" style="background:none;box-shadow:none;padding:0;"><?= brand_logo_img() ?></div>
         <div>
             <h1>CareSched</h1>
             <p>Rural Health Unit of Arakan &middot; Patient Record</p>

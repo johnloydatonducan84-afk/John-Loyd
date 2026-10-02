@@ -2033,6 +2033,7 @@ function notification_icon(
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 <body>

@@ -1456,6 +1456,7 @@ body {
 
 </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 
@@ -1482,9 +1483,9 @@ body {
         class="brand"
     >
 
-        <div class="brand-icon">
+        <div class="brand-icon" style="background:none;box-shadow:none;padding:0;">
 
-            <i class="bi bi-heart-pulse-fill"></i>
+            <?= brand_logo_img() ?>
 
         </div>
 

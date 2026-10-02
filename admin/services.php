@@ -1123,6 +1123,7 @@ try {
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 <body>

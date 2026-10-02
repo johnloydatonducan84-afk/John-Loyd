@@ -105,6 +105,29 @@ function app_full_url(string $path = ''): string
 }
 
 /**
+ * CareSched logo mark as an <img> that fills its container.
+ */
+function brand_logo_img(string $style = 'width:100%;height:100%;display:block;'): string
+{
+    return '<img src="' . htmlspecialchars(app_url('assets/logo/caresched-mark.svg'), ENT_QUOTES, 'UTF-8')
+        . '" alt="CareSched" style="' . htmlspecialchars($style, ENT_QUOTES, 'UTF-8') . '">';
+}
+
+/**
+ * Favicon / app icon <link> tags for the page <head>.
+ */
+function brand_favicon_tags(): string
+{
+    $svg = htmlspecialchars(app_url('assets/logo/caresched-mark.svg'), ENT_QUOTES, 'UTF-8');
+    $png = htmlspecialchars(app_url('assets/logo/caresched-mark-192.png'), ENT_QUOTES, 'UTF-8');
+    $apple = htmlspecialchars(app_url('assets/logo/apple-touch-icon.png'), ENT_QUOTES, 'UTF-8');
+
+    return '<link rel="icon" type="image/svg+xml" href="' . $svg . '">' . "\n"
+        . '<link rel="icon" type="image/png" sizes="192x192" href="' . $png . '">' . "\n"
+        . '<link rel="apple-touch-icon" href="' . $apple . '">' . "\n";
+}
+
+/**
  * Generate or return CSRF token.
  */
 function csrf_token()

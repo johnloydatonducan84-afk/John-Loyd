@@ -292,8 +292,8 @@ html[data-theme="dark"] body {
 <div class="sidebar-menu">
 
     <a href="dashboard.php" class="sidebar-brand">
-        <div class="brand-icon">
-            <i class="fa-solid fa-heart-pulse"></i>
+        <div class="brand-icon" style="background:none;box-shadow:none;padding:0;">
+            <?= brand_logo_img() ?>
         </div>
         <div class="brand-text">
             <strong>CareSched</strong>

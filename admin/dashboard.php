@@ -858,6 +858,7 @@ $today_appointments_list = $today_stmt->fetchAll(PDO::FETCH_ASSOC);
 
     </style>
 
+<?= brand_favicon_tags() ?>
 </head>
 
 <body>
